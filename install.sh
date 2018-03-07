@@ -6,4 +6,7 @@ set -ex
 # numpy has to be installed first otherwise jupyter installation will fail
 pipenv install numpy
 pipenv install jupyter
+pushd thoth-jupyter-notebook
+git pull
+popd
 pipenv install -r thoth-jupyter-notebook/requirements.txt
