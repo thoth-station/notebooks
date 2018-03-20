@@ -3,6 +3,9 @@
 set -ex
 
 [ -d thoth-jupyter-notebook ] || git clone https://github.com/fridex/thoth-jupyter-notebook
+pushd thoth-jupyter-notebook
+git pull
+popd
 # numpy has to be installed first otherwise jupyter installation will fail
 pipenv install numpy
 pipenv install jupyter
