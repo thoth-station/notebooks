@@ -8,7 +8,7 @@ Installation and running
 
 .. code-block:: console
 
-  $ git clone git@github.com:fridex/thoth-notebooks.git
+  $ git clone git@github.com:thoth-station/notebooks.git
   $ cd thoth-notebooks
   $ ./install.sh
   ...
