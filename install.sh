@@ -2,7 +2,7 @@
 
 set -ex
 
-[ -d thoth-jupyter-notebook ] || git clone https://github.com/fridex/thoth-jupyter-notebook
+[ -d thoth-jupyter-notebook ] || git clone https://github.com/thoth-station/jupyter-notebook
 pushd thoth-jupyter-notebook
 git pull
 popd
