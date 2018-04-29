@@ -2,3 +2,4 @@ thoth-jupyter-notebook
 Pipfile
 Pipfile.lock
 notebooks/.ipynb_checkpoints
+jupyter-notebook/
