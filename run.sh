@@ -7,7 +7,7 @@ export THOTH_DEPLOYMENT_NAME=
 export THOTH_CEPH_BUCKET=
 export THOTH_CEPH_KEY_ID=
 export THOTH_CEPH_SECRET_KEY=
-export THOTH_CEPH_HOST=
+export THOTH_S3_ENDPOINT_URL=
 #    !!! DO NOT COMMIT CHANGES !!!
 
 pipenv run jupyter notebook --notebook-dir=notebooks
