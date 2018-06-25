@@ -1,0 +1,33 @@
+---
+- name: Playbook to test jupyter notebook
+  hosts: localhost  
+  gather_facts: false
+  connection: local
+
+  tasks:
+    - name: Convert jupyter notebook to scripts
+      command: jupyter nbconvert --output-dir='tests' --to script "{{ item }}"
+      with_fileglob:
+        - "{{ playbook_dir }}/tests/*.ipynb"
+
+    - name: Execute - python scripts
+      command: python3 "{{ item }}"
+      run_once: true
+      with_fileglob:
+        - "{{ playbook_dir }}/tests/*.py"
+      register: output
+      ignore_errors: true
+      no_log: true
+
+    - name: Debug - broken scripts
+      debug: 
+        msg:
+          - "{{item.item}}"
+          - "{{item.stderr.split('\n')}}"
+      when: item.stderr != ""
+      with_items: "{{ output.results }}"
+
+    - fail:
+      when: item.stderr != ""
+      no_log: true
+      with_items: "{{ output.results }}"
