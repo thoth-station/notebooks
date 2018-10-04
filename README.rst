@@ -9,7 +9,7 @@ Installation and running
 .. code-block:: console
 
   $ git clone git@github.com:thoth-station/notebooks.git
-  $ cd thoth-notebooks
+  $ cd notebooks
   $ ./install.sh
   ...
   $ ./run.sh
