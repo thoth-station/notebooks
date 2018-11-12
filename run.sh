@@ -1,5 +1,8 @@
 #!/bin/bash
 
+set -e
+set -x
+
 if [ ! -z "$VAR" ]
 then
 	eval $(gopass show aicoe/thoth/ceph.sh)
@@ -7,8 +10,8 @@ then
        	export THOTH_CEPH_BUCKET=''
 	export THOTH_CEPH_HOST=''
 	export THOTH_CEPH_BUCKET_PREFIX=''
-	export THOTH_JANUSGRAPH_HOST=''
-	export THOTH_JANUSGRAPH_PORT=''
+	export JANUSGRAPH_SERVICE_HOST=''
+	export JANUSGRAPH_SERVICE_PORT=''
 	pipenv run jupyter notebook --notebook-dir=notebooks
 else
 	echo "You do not have access. Please check your accesibility rights"
