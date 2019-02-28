@@ -16,4 +16,6 @@ Installation and running
 
 The host system has to have Python3 and pipenv installed.
 
+For local run, there are used Thoth's libraries as cloned on the local machine.
+
 If you would like to access resources on the cluster, adjust the `run.sh` script and provide requested environment variables. Do NOT commit credentials!
