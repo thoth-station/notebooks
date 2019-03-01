@@ -6,6 +6,8 @@ set -ex
 pushd jupyter-notebook
 git pull
 popd
+# We explicitly set version of Python to 3.6.
+pipenv install --python 3.6
 # numpy has to be installed first otherwise jupyter installation will fail
 pipenv install numpy
 pipenv install jupyter
