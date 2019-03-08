@@ -12,6 +12,7 @@ then
 	export THOTH_CEPH_BUCKET_PREFIX=''
 	export JANUSGRAPH_SERVICE_HOST=''
 	export JANUSGRAPH_SERVICE_PORT=''
+	ulimit -Sn 4096
 	pipenv run jupyter notebook --notebook-dir=notebooks
 else
 	echo "You do not have access. Please check your accesibility rights"
