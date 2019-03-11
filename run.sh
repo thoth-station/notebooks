@@ -13,7 +13,7 @@ then
 	export JANUSGRAPH_SERVICE_HOST=''
 	export JANUSGRAPH_SERVICE_PORT=''
 	ulimit -Sn 4096
-	pipenv run jupyter notebook --notebook-dir=notebooks
+	pipenv run jupyter notebook --notebook-dir=notebooks --NotebookApp.token=''
 else
 	echo "You do not have access. Please check your accesibility rights"
 fi
