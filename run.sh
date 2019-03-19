@@ -3,20 +3,29 @@
 set -e
 
 CREDENTIALS="\
-	THOTH_DEPLOYMENT_NAME		custom deployment name	[optional], defaults to \$USER
-	THOTH_CEPH_HOST				Ceph s3 host url
-	THOTH_CEPH_BUCKET			Ceph s3 bucket name
-	THOTH_CEPH_BUCKET_PREFIX	Ceph s3 bucket prefix
-	JANUSGRAPH_SERVICE_HOST		Janusgraph host url
-	JANUSGRAPH_SERVICE_PORT		Janusgraph host port    [optional], defaults to 8182
+THOTH_DEPLOYMENT_NAME\tcustom deployment name\t[optional], defaults to \$USER\n
+THOTH_CEPH_HOST\t Ceph s3 host url\n
+THOTH_CEPH_BUCKET\t Ceph s3 bucket name\n
+THOTH_CEPH_BUCKET_PREFIX\t Ceph s3 bucket prefix\t\n
+JANUSGRAPH_SERVICE_HOST\t Janusgraph host url\t\n
+JANUSGRAPH_SERVICE_PORT\t Janusgraph host port\t [optional], defaults to 8182\n
 "
+
+function die() {
+    echo "$*" 1>&2
+    exit 1
+}
 
 display_usage() {
   echo
   echo "Usage: $0"
   echo
-  echo " -h, --help     Display this help and exit"
-  echo " -c, --cluster  Use cluster components. This requires proper credential setup: \n $CREDENTIALS"
+  echo -e " -h, --help     Display this help and exit"
+  echo -e " -c, --cluster  Use cluster components. This requires proper credential setup:"
+  echo
+  echo -e "Credentials:\n"
+  # echo -e " $(echo -e $CREDENTIALS | awk -F ',' '{printf "%-30s%-30s%-20s\n",$1,$2,$3}')"
+  echo -e " $(echo -e $CREDENTIALS | column -t -s $'\t')"
   echo
 }
 
@@ -79,9 +88,9 @@ if [ "${INSTALL}" = "true" ]; then
 	echo -e "\033[33;1mINFO: Installing...\033[0m"
 	echo -e "\033[33;1mNOTE: Grab a coffee, this will take a while.\033[0m"
 	if [ "${VERBOSE}" = "true" ]; then
-		/usr/bin/env bash ./install.sh || exit $?
+		/usr/bin/env bash ./install.sh
 	else
-		/usr/bin/env bash ./install.sh > /dev/null || exit ${PIPESTATUS[0]}
+		/usr/bin/env bash ./install.sh > /dev/null
 	fi
 fi
 
@@ -92,10 +101,10 @@ if [ "${LOCAL}" = "false" ]; then
 
 	# These must be set by environment
 	echo -e "\033[33;1mINFO: Checking required environment variables.\033[0m"
-	[ -z "$THOTH_CEPH_HOST" ]          && echo "ERROR: THOTH_CEPH_HOST must be set"  		 && exit 1
-	[ -z "$THOTH_CEPH_BUCKET" ]		   && echo "ERROR: THOTH_CEPH_BUCKET must be set" 	  	 && exit 1
-	[ -z "$THOTH_CEPH_BUCKET_PREFIX" ] && echo "ERROR: THOTH_CEPH_BUCKET_PREFIX must be set" && exit 1
-	[ -z "$JANUSGRAPH_SERVICE_HOST" ]  && echo "ERROR: JANUSGRAPH_SERVICE_HOST must be set"  && exit 1
+	[ -z "$THOTH_CEPH_HOST" ]          && die "ERROR: THOTH_CEPH_HOST must be set"
+	[ -z "$THOTH_CEPH_BUCKET" ]        && die "ERROR: THOTH_CEPH_BUCKET must be set"
+	[ -z "$THOTH_CEPH_BUCKET_PREFIX" ] && die "ERROR: THOTH_CEPH_BUCKET_PREFIX must be set"
+	[ -z "$JANUSGRAPH_SERVICE_HOST" ]  && die "ERROR: JANUSGRAPH_SERVICE_HOST must be set"
 
 	# These are optional
 	echo -e "\033[33;1mINFO: Checking optional environment variables.\033[0m"
