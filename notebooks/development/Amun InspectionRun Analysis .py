@@ -23,7 +23,15 @@
 # %% [markdown]
 # **Introduction**
 #
-# The goal of this notebook is to...
+# The goal of this notebook is to show the behaviour of micro-benchmarks tested on Openshift. This notebook will evaluate the feasibility and accuracy of the tests in order to prove or discard the possibility of running benchmarks tests for ML applications on Openshift. 
+#
+# The analysis consider ~300 inspection jobs obtained considering:
+#
+# - same libraries
+# - same versions
+# - same environment
+#
+# The inputs for test are shown in section 2.
 
 # %% [markdown]
 # ---
@@ -71,7 +79,8 @@ def convert_json_into_dfs(input_json, upper_key: str, level: int, json_structure
             
             extract_structure_json(input_json[key], f"{upper_key}__{key}", level, json_structure)
         else:
-            json_structure.append([level, upper_key, key, input_json[key]])
+            json_structure.append([level, f"{upper_key}__{key}", key, input_json[key]])
+#             extract_structure_json(input_json[key], f"{upper_key}__{key}", level, json_structure)
             
     df_structure = pd.DataFrame(extract_structure_json(input_json,"", 0, []))
     df_structure.columns = ["Tree_depth", "Upper_keys", "Current_key", "Value"]
@@ -84,10 +93,10 @@ def filter_dfs(df_s, filter_df):
         available_combined_keys = set(df_s["Upper_keys"].values)
         
         if filter_df in available_keys:
-            ndf = df_s[df_s["Current_key"].str.contains(filter_df)]
+            ndf = df_s[df_s["Current_key"].str.contains(f"{filter_df}$", regex=True)]
             
         elif filter_df in available_combined_keys:
-            ndf = df_s[df_s["Upper_keys"].str.contains(filter_df)]
+            ndf = df_s[df_s["Upper_keys"].str.contains(f"{filter_df}$", regex=True)]
         else:
             print("The key is not in the json")
             ndf = "". join([f"The available keys are (WARNING: Some of the keys have no leafs):{available_keys} ", f"The available combined keys are: {available_combined_keys}"])
@@ -104,25 +113,16 @@ def filter_dfs(df_s, filter_df):
 # We can take a look at the inspection job structure from the point of view of the tree depth, considering a key or a combination of keys.
 
 # %%
-filter_dfs(convert_json_into_dfs(doc,"", 0, []), "status")
+filter_dfs(convert_json_into_dfs(doc,"", 0, []), "hwinfo")
 
 # %%
-filter_dataframe(df_structure, 1)
+filter_dataframe(df_structure, "__job_log__hwinfo__cpu")
 
 # %%
-filter_dataframe(df_structure, 2)
+filter_dataframe(df_structure, "platform")
 
 # %%
-filter_dataframe(df_structure, 3)
-
-# %%
-filter_dataframe(df_structure, 4)
-
-# %%
-filter_dataframe(df_structure, 5)
-
-# %%
-filter_dataframe(df_structure, 6)
+filter_dataframe(df_structure, "version")
 
 # %% [markdown]
 # ---
