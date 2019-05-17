@@ -16,26 +16,22 @@
 # %% [markdown] {"toc": true}
 # <h1>Table of Contents<span class="tocSkip"></span></h1>
 # <div class="toc"><ul class="toc-item"><li><span><a href="#Retrieve-inspection-jobs-from-Ceph" data-toc-modified-id="Retrieve-inspection-jobs-from-Ceph-1"><span class="toc-item-num">1&nbsp;&nbsp;</span>Retrieve inspection jobs from Ceph</a></span></li><li><span><a href="#Describe-the-structure-of-an-inspection-job-result" data-toc-modified-id="Describe-the-structure-of-an-inspection-job-result-2"><span class="toc-item-num">2&nbsp;&nbsp;</span>Describe the structure of an inspection job result</a></span></li><li><span><a href="#Mapping-InspectionRun-JSON-to-pandas-DataFrame" data-toc-modified-id="Mapping-InspectionRun-JSON-to-pandas-DataFrame-3"><span class="toc-item-num">3&nbsp;&nbsp;</span>Mapping InspectionRun JSON to pandas DataFrame</a></span><ul class="toc-item"><li><span><a href="#Feature-importance-analysis" data-toc-modified-id="Feature-importance-analysis-3.1"><span class="toc-item-num">3.1&nbsp;&nbsp;</span>Feature importance analysis</a></span><ul class="toc-item"><li><span><a href="#Status" data-toc-modified-id="Status-3.1.1"><span class="toc-item-num">3.1.1&nbsp;&nbsp;</span>Status</a></span></li><li><span><a href="#Specification" data-toc-modified-id="Specification-3.1.2"><span class="toc-item-num">3.1.2&nbsp;&nbsp;</span>Specification</a></span></li><li><span><a href="#Job-log" data-toc-modified-id="Job-log-3.1.3"><span class="toc-item-num">3.1.3&nbsp;&nbsp;</span>Job log</a></span></li></ul></li></ul></li><li><span><a href="#Profile-InspectionRun-duration" data-toc-modified-id="Profile-InspectionRun-duration-4"><span class="toc-item-num">4&nbsp;&nbsp;</span>Profile InspectionRun duration</a></span></li><li><span><a href="#Plot-InspectionRun-duration" data-toc-modified-id="Plot-InspectionRun-duration-5"><span class="toc-item-num">5&nbsp;&nbsp;</span>Plot InspectionRun duration</a></span></li><li><span><a href="#Library-usage" data-toc-modified-id="Library-usage-6"><span class="toc-item-num">6&nbsp;&nbsp;</span>Library usage</a></span></li></ul></div>
-
 # %% [markdown]
 # # Amun InspectionRun Analysis
-
 # %% [markdown]
 # **Introduction**
 #
-# The goal of this notebook is to show the behaviour of micro-benchmarks tested on the selected software/hardware architecture. This notebook will evaluate the feasibility and accuracy of the tests in order to prove or discard the possibility of running benchmarks tests for ML applications. 
+# The goal of this notebook is to show the behaviour of micro-benchmarks tested on the selected software/hardware architecture. This notebook will evaluate the feasibility and accuracy of the tests in order to prove or discard the possibility of running micro-benchmarks tests for ML applications. 
 #
 # The analysis consider ~300 inspection jobs obtained considering:
 #
 # - same libraries
 # - same versions
 # - same environment
-#
-# The inputs for test are shown in section 2.
+# - same micro-benchmark for performance test
 
 # %% [markdown]
 # ---
-
 # %% [markdown]
 # ## Retrieve inspection jobs from Ceph
 
@@ -60,7 +56,6 @@ doc
 
 # %% [markdown]
 # ---
-
 # %% [markdown]
 # ## Describe the structure of an inspection job result
 
@@ -113,11 +108,29 @@ def filter_dfs(df_s, filter_df):
 df_structure = pd.DataFrame(extract_structure_json(doc, "", 0, []))
 df_structure.columns = ["Tree_depth", "Upper_keys", "Current_key", "Value"]
 
+# %% [markdown]
+# Check the structure of an inspection job
+
 # %%
-filter_dfs(df_structure, 1)
+df_structure
 
 # %% [markdown]
-# Check hardware info
+# Check memory requested for build and run.
+
+# %%
+filter_dfs(df_structure, "memory")
+
+# %% [markdown]
+# Check hardware requested for build and run.
+
+# %%
+filter_dfs(df_structure, "__specification__build__requests__hardware")
+
+# %%
+filter_dfs(df_structure, "__specification__run__requests__hardware")
+
+# %% [markdown]
+# Verify hardware info
 
 # %%
 filter_dfs(df_structure, "__job_log__hwinfo")
@@ -135,6 +148,12 @@ filter_dfs(df_structure, "__job_log__hwinfo__cpu")
 filter_dfs(df_structure, "__job_log__hwinfo__platform")
 
 # %% [markdown]
+# Check source of libraries
+
+# %%
+filter_dfs(df_structure, "__specification__python__requirements_locked___meta")
+
+# %% [markdown]
 # Check which libraries are used.
 
 # %%
@@ -143,8 +162,19 @@ for package in filter_dfs(df_structure, "__specification__python__requirements_l
     print("{:15}  {}".format(package, dfp[dfp["Current_key"].str.contains("version")]["Value"].values[0]))
 
 # %% [markdown]
-# ---
+# Check OS used
 
+# %%
+filter_dfs(df_structure, "base")
+
+# %% [markdown]
+# Check the micro-benchmark used
+
+# %%
+filter_dfs(df_structure, "script")
+
+# %% [markdown]
+# ---
 # %% [markdown]
 # ## Mapping InspectionRun JSON to pandas DataFrame
 
@@ -242,7 +272,6 @@ p
 
 # %%
 rejected = p.description_set['variables'].query("distinct_count <= 1 & type != 'UNSUPPORTED'")
-    
 rejected
 
 # %%
@@ -309,7 +338,6 @@ df = process_inspection_results(
 
 # %% [markdown]
 # ---
-
 # %% [markdown]
 # ## Profile InspectionRun duration
 
@@ -443,7 +471,6 @@ df_duration.job_duration.iplot(
 
 # %% [markdown]
 # ---
-
 # %% [markdown]
 # ## Library usage
 
