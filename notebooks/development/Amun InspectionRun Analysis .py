@@ -182,9 +182,6 @@ f"The original DataFrame contains  {len(df.columns)}  columns"
 # %%
 inspection_results[0].keys()
 
-# %%
-df_structure
-
 # %% [markdown]
 # #### Status
 
@@ -310,9 +307,6 @@ df = process_inspection_results(
     ]
 )
 
-# %%
-df.head()
-
 # %% [markdown]
 # ---
 
@@ -359,10 +353,11 @@ df.filter(regex='python.*version').drop_duplicates()
 # Visualize statistics
 
 # %%
-df_duration.iplot(
+fig = df_duration.iplot(
     kind='box',
     title="InspectionRun duration",
-    yTitle="duration [s]"
+    yTitle="duration [s]",
+    asFigure=True,
 )
 
 # %%
@@ -454,3 +449,166 @@ df_duration.job_duration.iplot(
 
 
 # %%
+# -*- coding: utf-8 -*-
+
+import plotly.graph_objs as go
+import plotly.offline as py
+import cufflinks as cf
+
+import numpy as np
+import pandas as pd
+
+from pandas_profiling import ProfileReport as profile
+
+from typing import Any, List, Tuple, Union
+
+"""Thoth InspectionRun dashboard app."""
+
+cf.go_offline()
+pd.set_option('precision', 4)
+pd.set_option('colheader_justify', 'center')
+
+
+def create_duration_dataframe(inspection_df: pd.DataFrame):
+    """Compute statistics and duration DataFrame."""
+    if len(inspection_df) <= 0:
+        raise ValueError("Empty DataFrame provided")
+
+    try:
+        inspection_df.drop("build_log", axis=1, inplace=True)
+    except KeyError:
+        pass
+
+    data = (
+        inspection_df.filter(like="duration")
+        .rename(columns=lambda s: s.replace("status__", "").replace("__", "_"))
+        .apply(lambda ts: pd.to_timedelta(ts).dt.total_seconds())
+    )
+    data = (
+        data
+        .eval("job_duration_mean           = job_duration.mean()", engine="python")
+        .eval("job_duration_upper_bound    = job_duration + job_duration.std()", engine="python")
+        .eval("job_duration_lower_bound    = job_duration - job_duration.std()", engine="python")
+        .eval("build_duration_mean         = build_duration.mean()", engine="python")
+        .eval("build_duration_upper_bound  = build_duration + build_duration.std()", engine="python")
+        .eval("build_duration_lower_bound  = build_duration - build_duration.std()", engine="python")
+    )
+
+    return data.round(4)
+
+
+def create_duration_box(data: pd.DataFrame, columns: List[str] = None, **kwargs):
+    """Create duration Box plot."""
+    columns = columns or []
+
+    figure = data[columns].iplot(
+        kind="box", title=kwargs.pop("title", "InspectionRun duration"), yTitle="duration [s]", asFigure=True
+    )
+
+    return figure
+
+
+def create_duration_scatter(data: pd.DataFrame, col: str, **kwargs):
+    """Create duration Scatter plot."""
+    df_duration = (
+        data[[col]]
+        .eval(f"upper_bound = {col} + {col}.std()", engine="python")
+        .eval(f"lower_bound = {col} - {col}.std()", engine="python")
+    )
+
+    upper_bound = go.Scatter(
+        name="Upper Bound",
+        x=df_duration.index,
+        y=df_duration.upper_bound,
+        mode="lines",
+        marker=dict(color="lightgray"),
+        line=dict(width=0),
+        fillcolor="rgba(68, 68, 68, 0.3)",
+        fill="tonexty",
+    )
+
+    trace = go.Scatter(
+        name="Duration",
+        x=df_duration.index,
+        y=df_duration[col],
+        mode="lines",
+        line=dict(color="rgb(31, 119, 180)"),
+        fillcolor="rgba(68, 68, 68, 0.3)",
+        fill="tonexty",
+    )
+
+    lower_bound = go.Scatter(
+        name="Lower Bound",
+        x=df_duration.index,
+        y=df_duration.lower_bound,
+        marker=dict(color="lightgray"),
+        line=dict(width=0),
+        mode="lines",
+    )
+
+    data = [lower_bound, trace, upper_bound]
+    m = df_duration[col].mean()
+
+    layout = go.Layout(
+        yaxis=dict(title="duration [s]"),
+        shapes=[
+            {
+                "type": "line",
+                "x0": 0,
+                "x1": len(df_duration.index),
+                "y0": m,
+                "y1": m,
+                "line": {"color": "red", "dash": "longdash"},
+            }
+        ],
+        title=kwargs.pop("title", "InspectionRun duration"),
+        showlegend=False,
+    )
+
+    fig = go.Figure(data=data, layout=layout)
+
+    return fig
+
+
+def create_duration_histogram(data: pd.DataFrame, columns: List[str] = None, bins: int = None, **kwargs):
+    """Create duration histogram."""
+    columns = columns or data.columns
+
+    if not bins:
+        bins = np.max([np.lib.histograms._hist_bin_auto(data[col].values, None) for col in columns])
+
+    figure = data[columns].iplot(
+        title=kwargs.pop("title", "InspectionRun distribution"),
+        xTitle="duration [s]",
+        yTitle="count",
+        kind="hist",
+        bins=int(np.ceil(bins)),
+        asFigure=True,
+    )
+
+    return figure
+
+
+
+# %%
+df_duration = create_duration_dataframe(df)
+
+# %%
+fig = create_duration_box(df_duration, ['build_duration', 'job_duration'])
+
+py.iplot(fig)
+
+# %%
+fig = create_duration_scatter(df_duration, 'job_duration', title="InspectionRun job duration")
+
+py.iplot(fig)
+
+# %%
+fig = create_duration_scatter(df_duration, 'build_duration', title="InspectionRun build duration")
+
+py.iplot(fig)
+
+# %%
+fig = create_duration_histogram(df_duration, ['job_duration'])
+
+py.iplot(fig)
