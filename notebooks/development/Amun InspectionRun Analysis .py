@@ -591,6 +591,15 @@ def create_duration_histogram(data: pd.DataFrame, columns: List[str] = None, bin
 
 
 # %%
+df = process_inspection_results(
+    inspection_results,
+    exclude=['build_log', 'created', 'inspection_id'],
+    apply=[
+        ("created|started_at|finished_at", pd.to_datetime)
+    ]
+)
+
+# %%
 df_duration = create_duration_dataframe(df)
 
 # %%
