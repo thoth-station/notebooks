@@ -8,9 +8,9 @@
 #       format_version: '1.2'
 #       jupytext_version: 1.1.1
 #   kernelspec:
-#     display_name: thoth-notebooks
+#     display_name: Python 3
 #     language: python
-#     name: thoth-notebooks
+#     name: python3
 # ---
 
 # %% [markdown] {"toc": true}
@@ -23,7 +23,7 @@
 # %% [markdown]
 # **Introduction**
 #
-# The goal of this notebook is to show the behaviour of micro-benchmarks tested on Openshift. This notebook will evaluate the feasibility and accuracy of the tests in order to prove or discard the possibility of running benchmarks tests for ML applications on Openshift. 
+# The goal of this notebook is to show the behaviour of micro-benchmarks tested on the selected software/hardware architecture. This notebook will evaluate the feasibility and accuracy of the tests in order to prove or discard the possibility of running benchmarks tests for ML applications. 
 #
 # The analysis consider ~300 inspection jobs obtained considering:
 #
@@ -70,8 +70,8 @@ pd.set_option('max_colwidth', 800)
 
 
 # %%
-def convert_json_into_dfs(input_json, upper_key: str, level: int, json_structure):
-    """Convert a json file structure into a df with rows showing tree depths, keys and values"""
+def extract_structure_json(input_json, upper_key: str, level: int, json_structure):
+    """Convert a json file structure into a list with rows showing tree depths, keys and values"""
     level += 1
     for key in input_json.keys():
         if type(input_json[key]) is dict:
@@ -79,21 +79,18 @@ def convert_json_into_dfs(input_json, upper_key: str, level: int, json_structure
             
             extract_structure_json(input_json[key], f"{upper_key}__{key}", level, json_structure)
         else:
-            json_structure.append([level, f"{upper_key}__{key}", key, input_json[key]])
-#             extract_structure_json(input_json[key], f"{upper_key}__{key}", level, json_structure)
+            json_structure.append([level, upper_key, key, input_json[key]])
             
-    df_structure = pd.DataFrame(extract_structure_json(input_json,"", 0, []))
-    df_structure.columns = ["Tree_depth", "Upper_keys", "Current_key", "Value"]
-    return df_structure
+    return json_structure
 
 def filter_dfs(df_s, filter_df):
-    """Filter the dataframe for a certain key, combination of keys or for a tree depth"""
+    """Filter the specific dataframe created for a certain key, combination of keys or for a tree depth"""
     if type(filter_df) is str:
         available_keys = set(df_s["Current_key"].values)
         available_combined_keys = set(df_s["Upper_keys"].values)
         
         if filter_df in available_keys:
-            ndf = df_s[df_s["Current_key"].str.contains(f"{filter_df}$", regex=True)]
+            ndf = df_s[df_s["Current_key"].str.contains(f"^{filter_df}$", regex=True)]
             
         elif filter_df in available_combined_keys:
             ndf = df_s[df_s["Upper_keys"].str.contains(f"{filter_df}$", regex=True)]
@@ -110,19 +107,40 @@ def filter_dfs(df_s, filter_df):
 
 
 # %% [markdown]
-# We can take a look at the inspection job structure from the point of view of the tree depth, considering a key or a combination of keys.
+# We can take a look at the inspection job structure from the point of view of the tree depth, considering a key or a combination of keys in order to understand the common inputs for all inspections.
 
 # %%
-filter_dfs(convert_json_into_dfs(doc,"", 0, []), "hwinfo")
+df_structure = pd.DataFrame(extract_structure_json(doc, "", 0, []))
+df_structure.columns = ["Tree_depth", "Upper_keys", "Current_key", "Value"]
 
 # %%
-filter_dataframe(df_structure, "__job_log__hwinfo__cpu")
+filter_dfs(df_structure, 1)
+
+# %% [markdown]
+# Check hardware info
 
 # %%
-filter_dataframe(df_structure, "platform")
+filter_dfs(df_structure, "__job_log__hwinfo")
+
+# %% [markdown]
+# Check CPU information
 
 # %%
-filter_dataframe(df_structure, "version")
+filter_dfs(df_structure, "__job_log__hwinfo__cpu")
+
+# %% [markdown]
+# Check Platform information
+
+# %%
+filter_dfs(df_structure, "__job_log__hwinfo__platform")
+
+# %% [markdown]
+# Check which libraries are used.
+
+# %%
+for package in filter_dfs(df_structure, "__specification__python__requirements_locked__default")["Current_key"].values:
+    dfp = filter_dfs(df_structure, f"__specification__python__requirements_locked__default__{package}")
+    print("{:15}  {}".format(package, dfp[dfp["Current_key"].str.contains("version")]["Value"].values[0]))
 
 # %% [markdown]
 # ---
