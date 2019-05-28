@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # ---
 # jupyter:
 #   jupytext:
@@ -8,14 +9,14 @@
 #       format_version: '1.2'
 #       jupytext_version: 1.1.1
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: thoth-notebooks
 #     language: python
-#     name: python3
+#     name: thoth-notebooks
 # ---
 
 # %% [markdown] {"toc": true}
 # <h1>Table of Contents<span class="tocSkip"></span></h1>
-# <div class="toc"><ul class="toc-item"><li><span><a href="#Retrieve-inspection-jobs-from-Ceph" data-toc-modified-id="Retrieve-inspection-jobs-from-Ceph-1"><span class="toc-item-num">1&nbsp;&nbsp;</span>Retrieve inspection jobs from Ceph</a></span></li><li><span><a href="#Describe-the-structure-of-an-inspection-job-result" data-toc-modified-id="Describe-the-structure-of-an-inspection-job-result-2"><span class="toc-item-num">2&nbsp;&nbsp;</span>Describe the structure of an inspection job result</a></span></li><li><span><a href="#Mapping-InspectionRun-JSON-to-pandas-DataFrame" data-toc-modified-id="Mapping-InspectionRun-JSON-to-pandas-DataFrame-3"><span class="toc-item-num">3&nbsp;&nbsp;</span>Mapping InspectionRun JSON to pandas DataFrame</a></span><ul class="toc-item"><li><span><a href="#Feature-importance-analysis" data-toc-modified-id="Feature-importance-analysis-3.1"><span class="toc-item-num">3.1&nbsp;&nbsp;</span>Feature importance analysis</a></span><ul class="toc-item"><li><span><a href="#Status" data-toc-modified-id="Status-3.1.1"><span class="toc-item-num">3.1.1&nbsp;&nbsp;</span>Status</a></span></li><li><span><a href="#Specification" data-toc-modified-id="Specification-3.1.2"><span class="toc-item-num">3.1.2&nbsp;&nbsp;</span>Specification</a></span></li><li><span><a href="#Job-log" data-toc-modified-id="Job-log-3.1.3"><span class="toc-item-num">3.1.3&nbsp;&nbsp;</span>Job log</a></span></li></ul></li></ul></li><li><span><a href="#Profile-InspectionRun-duration" data-toc-modified-id="Profile-InspectionRun-duration-4"><span class="toc-item-num">4&nbsp;&nbsp;</span>Profile InspectionRun duration</a></span></li><li><span><a href="#Plot-InspectionRun-duration" data-toc-modified-id="Plot-InspectionRun-duration-5"><span class="toc-item-num">5&nbsp;&nbsp;</span>Plot InspectionRun duration</a></span></li><li><span><a href="#Library-usage" data-toc-modified-id="Library-usage-6"><span class="toc-item-num">6&nbsp;&nbsp;</span>Library usage</a></span></li></ul></div>
+# <div class="toc"><ul class="toc-item"><li><span><a href="#Retrieve-inspection-jobs-from-Ceph" data-toc-modified-id="Retrieve-inspection-jobs-from-Ceph-1"><span class="toc-item-num">1&nbsp;&nbsp;</span>Retrieve inspection jobs from Ceph</a></span></li><li><span><a href="#Describe-the-structure-of-an-inspection-job-result" data-toc-modified-id="Describe-the-structure-of-an-inspection-job-result-2"><span class="toc-item-num">2&nbsp;&nbsp;</span>Describe the structure of an inspection job result</a></span></li><li><span><a href="#Mapping-InspectionRun-JSON-to-pandas-DataFrame" data-toc-modified-id="Mapping-InspectionRun-JSON-to-pandas-DataFrame-3"><span class="toc-item-num">3&nbsp;&nbsp;</span>Mapping InspectionRun JSON to pandas DataFrame</a></span><ul class="toc-item"><li><span><a href="#Feature-importance-analysis" data-toc-modified-id="Feature-importance-analysis-3.1"><span class="toc-item-num">3.1&nbsp;&nbsp;</span>Feature importance analysis</a></span><ul class="toc-item"><li><span><a href="#Status" data-toc-modified-id="Status-3.1.1"><span class="toc-item-num">3.1.1&nbsp;&nbsp;</span>Status</a></span></li><li><span><a href="#Specification" data-toc-modified-id="Specification-3.1.2"><span class="toc-item-num">3.1.2&nbsp;&nbsp;</span>Specification</a></span></li><li><span><a href="#Job-log" data-toc-modified-id="Job-log-3.1.3"><span class="toc-item-num">3.1.3&nbsp;&nbsp;</span>Job log</a></span></li></ul></li></ul></li><li><span><a href="#Profile-InspectionRun-duration" data-toc-modified-id="Profile-InspectionRun-duration-4"><span class="toc-item-num">4&nbsp;&nbsp;</span>Profile InspectionRun duration</a></span></li><li><span><a href="#Plot-InspectionRun-duration" data-toc-modified-id="Plot-InspectionRun-duration-5"><span class="toc-item-num">5&nbsp;&nbsp;</span>Plot InspectionRun duration</a></span></li><li><span><a href="#Library-usage" data-toc-modified-id="Library-usage-6"><span class="toc-item-num">6&nbsp;&nbsp;</span>Library usage</a></span></li><li><span><a href="#Grouping-and-filtering" data-toc-modified-id="Grouping-and-filtering-7"><span class="toc-item-num">7&nbsp;&nbsp;</span>Grouping and filtering</a></span><ul class="toc-item"><li><span><a href="#Grouping-based-on-hardware-platform" data-toc-modified-id="Grouping-based-on-hardware-platform-7.1"><span class="toc-item-num">7.1&nbsp;&nbsp;</span>Grouping based on hardware platform</a></span></li><li><span><a href="#Grouping-based-on-exit-status" data-toc-modified-id="Grouping-based-on-exit-status-7.2"><span class="toc-item-num">7.2&nbsp;&nbsp;</span>Grouping based on exit status</a></span></li><li><span><a href="#Creation-of-duration-dataframe-from-filtered-inspection-results" data-toc-modified-id="Creation-of-duration-dataframe-from-filtered-inspection-results-7.3"><span class="toc-item-num">7.3&nbsp;&nbsp;</span>Creation of duration dataframe from filtered inspection results</a></span></li></ul></li><li><span><a href="#Visualizing-grouped-data" data-toc-modified-id="Visualizing-grouped-data-8"><span class="toc-item-num">8&nbsp;&nbsp;</span>Visualizing grouped data</a></span></li></ul></div>
 # %% [markdown]
 # # Amun InspectionRun Analysis
 # %% [markdown]
@@ -44,7 +45,7 @@
 # %%
 from thoth.storages import InspectionResultsStore
 
-inspection_store = InspectionResultsStore()
+inspection_store = InspectionResultsStore(region='eu-central-1')
 inspection_store.connect()
 
 # %%
@@ -287,6 +288,7 @@ def process_inspection_results(
     inspection_results: List[dict],
     exclude: Union[list, set] = None,
     apply: List[Tuple] = None,
+    drop: bool = True,
     verbose: bool = False
 ) -> pd.DataFrame:
     """Process inspection result into pd.DataFrame."""
@@ -319,7 +321,8 @@ def process_inspection_results(
         if verbose:
             print("Rejected columns: ", rejected.index)
         
-        df.drop(rejected.index, axis=1, inplace=True)
+        if drop:
+            df.drop(rejected.index, axis=1, inplace=True)
         
     df = df \
         .eval("status__job__duration   = status__job__finished_at   - status__job__started_at", engine='python') \
@@ -507,26 +510,37 @@ def create_duration_dataframe(inspection_df: pd.DataFrame):
         pass
 
     data = (
-        inspection_df.filter(like="duration")
+        inspection_df
+        .filter(like="duration")
         .rename(columns=lambda s: s.replace("status__", "").replace("__", "_"))
         .apply(lambda ts: pd.to_timedelta(ts).dt.total_seconds())
     )
-    data = (
-        data
-        .eval("job_duration_mean           = job_duration.mean()", engine="python")
-        .eval("job_duration_upper_bound    = job_duration + job_duration.std()", engine="python")
-        .eval("job_duration_lower_bound    = job_duration - job_duration.std()", engine="python")
-        .eval("build_duration_mean         = build_duration.mean()", engine="python")
-        .eval("build_duration_upper_bound  = build_duration + build_duration.std()", engine="python")
-        .eval("build_duration_lower_bound  = build_duration - build_duration.std()", engine="python")
-    )
+    
+    def compute_duration_stats(group):
+        return (
+            group
+            .eval("job_duration_mean           = job_duration.mean()", engine="python")
+            .eval("job_duration_upper_bound    = job_duration + job_duration.std()", engine="python")
+            .eval("job_duration_lower_bound    = job_duration - job_duration.std()", engine="python")
+            .eval("build_duration_mean         = build_duration.mean()", engine="python")
+            .eval("build_duration_upper_bound  = build_duration + build_duration.std()", engine="python")
+            .eval("build_duration_lower_bound  = build_duration - build_duration.std()", engine="python")
+        )
+    
+    if isinstance(inspection_df.index, pd.MultiIndex):
+        n_levels = len(inspection_df.index.levels)
 
+        # compute duration stats for each group separately
+        data = data.groupby(level=list(range(n_levels - 1)), sort=False).apply(compute_duration_stats)
+    else:
+        data = compute_duration_stats(data)
+    
     return data.round(4)
 
 
 def create_duration_box(data: pd.DataFrame, columns: List[str] = None, **kwargs):
     """Create duration Box plot."""
-    columns = columns or []
+    columns = columns or data.columns
 
     figure = data[columns].iplot(
         kind="box", title=kwargs.pop("title", "InspectionRun duration"), yTitle="duration [s]", asFigure=True
@@ -648,3 +662,209 @@ py.iplot(fig)
 fig = create_duration_histogram(df_duration, ['job_duration'])
 
 py.iplot(fig)
+
+
+# %% [markdown]
+# ## Grouping and filtering
+#
+# [Trello](https://trello.com/c/7IiBLufs/560-grouping-of-inspection-job-results-based-on-given-criteria-nokr)
+#
+# The goal of this part is to have a function which divides inspection jobs into “categories”, the function accepts loaded inspection JSON files and a key which should be used to split input inspection documents.
+
+# %%
+def _resolve_query(query: str, context: pd.DataFrame = None, resolvers: tuple = None, engine:str = None, parser: str = "pandas"):
+    """Resolve query in the given context."""
+    import re
+    
+    if not query:
+        return context
+    
+    q = query
+    q = re.sub(r"\[\(", "", q)
+    q = re.sub(r"\b(\d)+\b", "", q)
+    q = re.sub(r"[+\-\*:!<>=~.|&%]", " ", q)
+    
+    # get our (possibly passed-in) scope
+    resolvers = resolvers or ()
+    if isinstance(context, pd.DataFrame):
+        index_resolvers = context._get_index_resolvers()
+        resolvers = tuple(resolvers) + (dict(context.iteritems()), index_resolvers)
+    
+    repl = []
+    for idx, resolver in enumerate(resolvers):
+        keys = resolver.keys()
+        
+        for op in set(q.split()):
+            matches = [(op, k) for k in keys if re.search(op, k)]
+
+            if len(matches) == 1:
+                op, key = matches[0]
+                repl.append((idx, op, resolver[key]))
+                
+            elif len(matches) > 1:
+                raise KeyError(f"Ambiguous query operand provided: `{op}`")
+    
+    for idx, op, val in repl:
+        resolvers[idx][op] = val
+    
+    env = _ensure_scope(level=1, resolvers=resolvers, target=context)
+    expr = Expr(query, engine=engine, parser=parser, env=env)
+    
+    def _resolve_operands(operands) -> list:
+        for op in operands:
+            # complex query
+            if op.is_scalar:
+                continue
+                
+            if hasattr(op, 'operands'):
+                yield from _resolve_operands(op.operands)
+                
+            yield str(op)
+            
+    operands = set(_resolve_operands(expr.terms.operands))
+    
+    for op in operands:
+        try:
+            query = query.replace(op, env.resolvers[op].name)
+        except KeyError:
+            pass
+
+    return context.query(query)
+
+
+# %%
+def filter_inspection_dataframe(
+    inspection_df: List[dict],
+    *,
+    groupby: Union[str, list, set] = None,
+    like: str = None,
+    regex: str = None,
+    axis: int = None,
+    where: str = None,
+    engine: str = None,
+    **groupby_kwargs,
+) -> pd.DataFrame:
+    """Filter inspection DataFrame for specific columns and optionally groups the data.
+    
+    Grouping takes precedence over filtering which takes precedence over querying.
+    
+    :param inspection_df: inspection DataFrame to be filtered as returned by `process_inspection_results`
+    :param groupby: column or list of columns to group the DataFrame by
+    :param like, regex, axis: parameters passed to the `pd.DataFrame.filter` function
+    :param where: pandas query to be evaluated on the filtered DataFrame
+    :param engine: engine to evaluate the query passed to `where` parameter, see `pd.eval` for more information
+        
+        The string provided does NOT need to match the whole column name, the function tries to determine
+        the most suitable column name automatically.
+        
+    :param **groupby_kwargs: additional parameters passed to the `pd.DataFrame.groupby` function
+    """
+    groupby = groupby or []
+    
+    # grouping
+    if groupby:
+        # intelligently find the right column to display
+        if isinstance(groupby, str):
+            columns = inspection_df.columns.str.rfind(groupby)
+            if max(columns) == -1:
+                raise KeyError(f"Could not find suitable column given the key: `{groupby}`")
+
+            groupby = [inspection_df.columns[columns.argmax()]]
+        else:
+            columns = []
+            for key in groupby:
+                columns.append(inspection_df.columns.str.rfind(key))
+
+            if np.max(columns) == -1:
+                raise KeyError(f"Could not find suitable column given the keys: `{groupby}`")
+
+            groupby = list(inspection_df.columns[np.array(columns).argmax(axis=1)])
+    
+        # construct multi-index if grouping is requested
+        indices = inspection_df.groupby(groupby, **groupby_kwargs).indices
+        
+        levels = []
+        for level, values in indices.items():
+            if isinstance(level, tuple):
+                levels.extend([(*level, v) for v in values])
+            else:
+                levels.extend([(level, v) for v in values])
+                
+        index = pd.MultiIndex.from_tuples(levels, names=[*groupby, None])
+        
+        inspection_df = (
+            inspection_df
+            .set_index(index)
+            .drop(groupby, axis=1)
+            .sort_index(level=-1)
+        )
+        
+    # filtering
+    if any([like, regex]):
+        filtered_df = inspection_df.filter(like=like, regex=regex, axis=axis)
+    
+        if not len(inspection_df.columns.str.contains("duration")):
+            # duration columns must be present
+            filtered_df = filtered_df.join(inspection_df.filter(like="duration"))
+        
+        inspection_df = filtered_df
+        
+    return _resolve_query(query=where, context=inspection_df)
+
+# %%
+df = process_inspection_results(
+    inspection_results,
+    exclude=['build_log', 'created', 'inspection_id'],
+    apply=[
+        ("created|started_at|finished_at", pd.to_datetime)
+    ],
+    drop=False
+)
+
+# %% [markdown]
+# ### Grouping based on hardware platform
+
+# %%
+filter_inspection_dataframe(df, groupby="platform")
+
+# %% [markdown]
+# It is also possible to group by multiple columns
+
+# %%
+filter_inspection_dataframe(df, groupby=["platform", "ncpus"])
+
+# %% [markdown]
+# And finally if we are only interested in certain columns, we can filter them as well
+
+# %%
+filter_inspection_dataframe(df, groupby=["platform", "ncpus"], like="duration")
+
+# %% [markdown]
+# Full-fledges filtering example can also filter based on the values
+
+# %%
+filter_inspection_dataframe(df, groupby=["platform", "ncpus"], like="duration", where="ncpus == 32")
+
+# %% [markdown]
+# ### Grouping based on exit status
+
+# %%
+filter_inspection_dataframe(df, like="job", groupby=["job__reason", "job__exit_code"])
+
+# %% [markdown]
+# ### Creation of duration dataframe from filtered inspection results
+
+# %% [markdown]
+# Creating the duration dataframe works as expected, by computing statistics for each group separately
+
+# %% [markdown]
+# Creating the duration dataframe works as expected, by computing statistics for each group separately
+
+# %%
+filtered_df = filter_inspection_dataframe(df, groupby=["platform", "ncpus"], like="duration", where="ncpus == 32 | ncpus == 64")
+duration_df = create_duration_dataframe(filtered_df)
+
+duration_df.sort_index(level=[0, 1]).head(10)
+
+# %% [markdown]
+# ## Visualizing grouped data
