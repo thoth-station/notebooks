@@ -675,6 +675,8 @@ py.iplot(fig)
 def _resolve_query(query: str, context: pd.DataFrame = None, resolvers: tuple = None, engine:str = None, parser: str = "pandas"):
     """Resolve query in the given context."""
     import re
+    from pandas.core.computation.expr import Expr
+    from pandas.core.computation.eval import _ensure_scope
     
     if not query:
         return context
@@ -733,25 +735,107 @@ def _resolve_query(query: str, context: pd.DataFrame = None, resolvers: tuple = 
 
 
 # %%
-def filter_inspection_dataframe(
+def group_inspection_dataframe(inspection_df: pd.DataFrame, groupby: Union[str, list, set] = None, exclude: Union[str, list, set] = None):
+    """"""
+    import re
+    
+    groupby = groupby or []
+    exclude = exclude or []
+    
+    if isinstance(groupby, str):
+        groupby = [groupby]
+
+    if isinstance(exclude, str):
+        exclude = [exclude]
+
+    groups = []
+
+    for key in groupby:
+        columns_idx = inspection_df.columns.str.contains(key)
+        columns = inspection_df.columns[columns_idx]
+
+        if not len(columns):
+            raise KeyError(f"Could NOT find suitable column given the keys: `{groupby}`")
+
+        groups.extend(columns)
+
+    index_groups = []
+
+    for col in inspection_df[groups].columns:
+        # check that the column name is not excluded
+        if any(re.search(e, col) for e in exclude):
+            continue
+
+        try:
+            # check that grouping is possible
+            inspection_df.groupby(col).indices
+
+            index_groups.append(col)
+        except TypeError:
+            print(f"Column '{col}' dtype NOT understood. Dropped.")
+
+    index_groups = pd.Series(index_groups).unique().tolist()
+
+    # construct multi-index if grouping is requested
+    indices = inspection_df.groupby(index_groups).indices
+
+    levels = []
+    for level, values in indices.items():
+        if isinstance(level, tuple):
+            levels.extend([(*level, v) for v in values])
+        else:
+            levels.extend([(level, v) for v in values])
+
+    index = pd.MultiIndex.from_tuples(levels, names=[*index_groups, None])
+
+    return (
+        inspection_df
+        .set_index(index)
+        .drop(index_groups, axis=1)
+        .sort_index(level=-1)
+    )
+
+
+# %%
+def filter_inspection_dataframe(inspection_df: pd.DataFrame, like: str = None, regex: str = None, axis: int = None):
+    """"""
+    if not any([like, regex]):
+        return inspection_df
+
+    filtered_df = inspection_df.filter(like=like, regex=regex, axis=axis)
+
+    if not any(filtered_df.columns.str.contains("duration")):
+        # duration columns must be present
+        filtered_df = filtered_df.join(inspection_df.filter(like="duration"))
+
+    inspection_df = filtered_df
+        
+    return inspection_df
+
+
+# %% {"code_folding": []}
+def query_inspection_dataframe(
     inspection_df: List[dict],
     *,
+    query: str = None,
     groupby: Union[str, list, set] = None,
+    exclude: Union[str, list, set] = None,
     like: str = None,
     regex: str = None,
     axis: int = None,
-    where: str = None,
-    engine: str = None,
-    **groupby_kwargs,
+    engine: str = None
 ) -> pd.DataFrame:
-    """Filter inspection DataFrame for specific columns and optionally groups the data.
+    """Query inspection DataFrame.
     
-    Grouping takes precedence over filtering which takes precedence over querying.
+    The order of operations is as follows:
+    
+        query resolution -> grouping -> filtering
     
     :param inspection_df: inspection DataFrame to be filtered as returned by `process_inspection_results`
     :param groupby: column or list of columns to group the DataFrame by
+    :param exclude: patterns that should be excluded from grouping
+    :param query: pandas query to be evaluated on the filtered DataFrame
     :param like, regex, axis: parameters passed to the `pd.DataFrame.filter` function
-    :param where: pandas query to be evaluated on the filtered DataFrame
     :param engine: engine to evaluate the query passed to `where` parameter, see `pd.eval` for more information
         
         The string provided does NOT need to match the whole column name, the function tries to determine
@@ -759,57 +843,14 @@ def filter_inspection_dataframe(
         
     :param **groupby_kwargs: additional parameters passed to the `pd.DataFrame.groupby` function
     """
-    groupby = groupby or []
-    
-    # grouping
+    # resolve query
+    inspection_df = _resolve_query(query=query, context=inspection_df)
+     
     if groupby:
-        # intelligently find the right column to display
-        if isinstance(groupby, str):
-            columns = inspection_df.columns.str.rfind(groupby)
-            if max(columns) == -1:
-                raise KeyError(f"Could not find suitable column given the key: `{groupby}`")
-
-            groupby = [inspection_df.columns[columns.argmax()]]
-        else:
-            columns = []
-            for key in groupby:
-                columns.append(inspection_df.columns.str.rfind(key))
-
-            if np.max(columns) == -1:
-                raise KeyError(f"Could not find suitable column given the keys: `{groupby}`")
-
-            groupby = list(inspection_df.columns[np.array(columns).argmax(axis=1)])
-    
-        # construct multi-index if grouping is requested
-        indices = inspection_df.groupby(groupby, **groupby_kwargs).indices
+        inspection_df = group_inspection_dataframe(inspection_df, groupby=groupby, exclude=exclude)
         
-        levels = []
-        for level, values in indices.items():
-            if isinstance(level, tuple):
-                levels.extend([(*level, v) for v in values])
-            else:
-                levels.extend([(level, v) for v in values])
-                
-        index = pd.MultiIndex.from_tuples(levels, names=[*groupby, None])
-        
-        inspection_df = (
-            inspection_df
-            .set_index(index)
-            .drop(groupby, axis=1)
-            .sort_index(level=-1)
-        )
-        
-    # filtering
-    if any([like, regex]):
-        filtered_df = inspection_df.filter(like=like, regex=regex, axis=axis)
-    
-        if not len(inspection_df.columns.str.contains("duration")):
-            # duration columns must be present
-            filtered_df = filtered_df.join(inspection_df.filter(like="duration"))
-        
-        inspection_df = filtered_df
-        
-    return _resolve_query(query=where, context=inspection_df)
+    # filter
+    return filter_inspection_dataframe(inspection_df, like=like, regex=regex, axis=axis)
 
 # %%
 df = process_inspection_results(
@@ -825,31 +866,31 @@ df = process_inspection_results(
 # ### Grouping based on hardware platform
 
 # %%
-filter_inspection_dataframe(df, groupby="platform")
+query_inspection_dataframe(df, groupby="platform", exclude="node")
 
 # %% [markdown]
 # It is also possible to group by multiple columns
 
 # %%
-filter_inspection_dataframe(df, groupby=["platform", "ncpus"])
+query_inspection_dataframe(df, groupby=["ncpus", "platform"], exclude="node")
 
 # %% [markdown]
 # And finally if we are only interested in certain columns, we can filter them as well
 
 # %%
-filter_inspection_dataframe(df, groupby=["platform", "ncpus"], like="duration")
+query_inspection_dataframe(df, groupby=["platform", "ncpus"], like="duration", exclude="node")
 
 # %% [markdown]
-# Full-fledges filtering example can also filter based on the values
+# Full-fledged filtering example can also filter based on the values
 
 # %%
-filter_inspection_dataframe(df, groupby=["platform", "ncpus"], like="duration", where="ncpus == 32")
+query_inspection_dataframe(df, query="ncpus == 32", groupby=["platform", "ncpus"], like="duration", exclude="node")
 
 # %% [markdown]
 # ### Grouping based on exit status
 
 # %%
-filter_inspection_dataframe(df, like="job", groupby=["job__reason", "job__exit_code"])
+query_inspection_dataframe(df, like="job", groupby=["reason", "exit_code"], exclude="build")
 
 # %% [markdown]
 # ### Creation of duration dataframe from filtered inspection results
@@ -857,14 +898,14 @@ filter_inspection_dataframe(df, like="job", groupby=["job__reason", "job__exit_c
 # %% [markdown]
 # Creating the duration dataframe works as expected, by computing statistics for each group separately
 
-# %% [markdown]
-# Creating the duration dataframe works as expected, by computing statistics for each group separately
-
 # %%
-filtered_df = filter_inspection_dataframe(df, groupby=["platform", "ncpus"], like="duration", where="ncpus == 32 | ncpus == 64")
-duration_df = create_duration_dataframe(filtered_df)
+filtered_df = query_inspection_dataframe(
+    df,
+    groupby=["platform", "ncpus"],
+    like="duration",
+    query="ncpus == 32 | ncpus == 64",
+    exclude="node"
+)
 
-duration_df.sort_index(level=[0, 1]).head(10)
-
-# %% [markdown]
-# ## Visualizing grouped data
+df_duration = create_duration_dataframe(filtered_df)
+df_duration
