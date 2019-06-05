@@ -22,7 +22,7 @@
 # %% [markdown]
 # **Introduction**
 #
-# The goal of this notebook is to show the behaviour of micro-benchmarks tested on the selected software/hardware architecture. This notebook will evaluate the feasibility and accuracy of the tests in order to prove or discard the possibility of running micro-benchmarks tests for ML applications. 
+# The goal of this notebook is to show the behaviour of micro-benchmarks tested on the selected software/hardware architecture. This notebook will evaluate the feasibility and accuracy of the tests in order to prove or discard the possibility of running micro-benchmarks tests for ML applications.
 #
 # The analysis consider ~300 inspection jobs obtained considering:
 #
@@ -87,7 +87,7 @@ cf.go_offline()
 %env THOTH_S3_ENDPOINT_URL     https://s3.upshift.redhat.com/
 
 # %%
-inspection_store = InspectionResultsStore(region='eu-central-1')
+inspection_store = InspectionResultsStore(region="eu-central-1")
 inspection_store.connect()
 
 # %% [markdown]
@@ -96,7 +96,7 @@ inspection_store.connect()
 # ## Describe the structure of an inspection job result
 
 # %% {"hidden": true}
-pd.set_option('max_colwidth', 800)
+pd.set_option("max_colwidth", 800)
 
 
 # %% {"hidden": true}
@@ -105,28 +105,38 @@ def extract_structure_json(input_json, upper_key: str, level: int, json_structur
     level += 1
     for key in input_json.keys():
         if type(input_json[key]) is dict:
-            json_structure.append([level, upper_key, key, [k for k in input_json[key].keys()]])
-            
-            extract_structure_json(input_json[key], f"{upper_key}__{key}", level, json_structure)
+            json_structure.append(
+                [level, upper_key, key, [k for k in input_json[key].keys()]]
+            )
+
+            extract_structure_json(
+                input_json[key], f"{upper_key}__{key}", level, json_structure
+            )
         else:
             json_structure.append([level, upper_key, key, input_json[key]])
-            
+
     return json_structure
+
 
 def filter_dfs(df_s, filter_df):
     """Filter the specific dataframe created for a certain key, combination of keys or for a tree depth"""
     if type(filter_df) is str:
         available_keys = set(df_s["Current_key"].values)
         available_combined_keys = set(df_s["Upper_keys"].values)
-        
+
         if filter_df in available_keys:
             ndf = df_s[df_s["Current_key"].str.contains(f"^{filter_df}$", regex=True)]
-            
+
         elif filter_df in available_combined_keys:
             ndf = df_s[df_s["Upper_keys"].str.contains(f"{filter_df}$", regex=True)]
         else:
             print("The key is not in the json")
-            ndf = "". join([f"The available keys are (WARNING: Some of the keys have no leafs):{available_keys} ", f"The available combined keys are: {available_combined_keys}"])
+            ndf = "".join(
+                [
+                    f"The available keys are (WARNING: Some of the keys have no leafs):{available_keys} ",
+                    f"The available combined keys are: {available_combined_keys}",
+                ]
+            )
     elif type(filter_df) is int:
         max_depth = df_s["Tree_depth"].max()
         if filter_df <= max_depth:
@@ -192,9 +202,18 @@ filter_dfs(df_structure, "__specification__python__requirements_locked___meta")
 # Check which libraries are used.
 
 # %% {"hidden": true}
-for package in filter_dfs(df_structure, "__specification__python__requirements_locked__default")["Current_key"].values:
-    dfp = filter_dfs(df_structure, f"__specification__python__requirements_locked__default__{package}")
-    print("{:15}  {}".format(package, dfp[dfp["Current_key"].str.contains("version")]["Value"].values[0]))
+for package in filter_dfs(
+    df_structure, "__specification__python__requirements_locked__default"
+)["Current_key"].values:
+    dfp = filter_dfs(
+        df_structure,
+        f"__specification__python__requirements_locked__default__{package}",
+    )
+    print(
+        "{:15}  {}".format(
+            package, dfp[dfp["Current_key"].str.contains("version")]["Value"].values[0]
+        )
+    )
 
 # %% [markdown] {"hidden": true}
 # Check OS used
@@ -218,8 +237,8 @@ inspection_results = []
 
 for document_id, document in inspection_store.iterate_results():
     # pop build logs to save some memory (not necessary for now)
-    document['build_log'] = None
-    
+    document["build_log"] = None
+
     inspection_results.append(document)
 
 # %% [markdown]
@@ -242,7 +261,7 @@ inspection_results[0].keys()
 # #### Status
 
 # %% {"require": ["base/js/events", "datatables.net", "d3", "jupyter-datatables"]}
-df_status = df.filter(regex='status')
+df_status = df.filter(regex="status")
 
 date_columns = df_status.filter(regex="started_at|finished_at").columns
 for col in date_columns:
@@ -256,7 +275,9 @@ p
 # According to the profiling, we can drop the values with the constant value:
 
 # %%
-rejected = p.description_set['variables'].query("distinct_count <= 1 & type != 'UNSUPPORTED'")
+rejected = p.description_set["variables"].query(
+    "distinct_count <= 1 & type != 'UNSUPPORTED'"
+)
 rejected
 
 # %%
@@ -266,14 +287,16 @@ df.drop(rejected.index, axis=1, inplace=True)
 # #### Specification
 
 # %%
-df_spec = df.filter(regex='specification')
+df_spec = df.filter(regex="specification")
 
 # %%
 p = profile(df_spec)
 p
 
 # %%
-rejected = p.description_set['variables'].query("distinct_count <= 1 & type != 'UNSUPPORTED'")
+rejected = p.description_set["variables"].query(
+    "distinct_count <= 1 & type != 'UNSUPPORTED'"
+)
 rejected
 
 # %% [markdown]
@@ -290,14 +313,16 @@ df.drop(rejected.index, axis=1, inplace=True)
 # #### Job log
 
 # %%
-df_job = df.filter(regex='job_log')
+df_job = df.filter(regex="job_log")
 
 # %%
 p = profile(df_job)
 p
 
 # %%
-rejected = p.description_set['variables'].query("distinct_count <= 1 & type != 'UNSUPPORTED'")
+rejected = p.description_set["variables"].query(
+    "distinct_count <= 1 & type != 'UNSUPPORTED'"
+)
 rejected
 
 # %%
@@ -313,54 +338,64 @@ def process_inspection_results(
     exclude: Union[list, set] = None,
     apply: List[Tuple] = None,
     drop: bool = True,
-    verbose: bool = False
+    verbose: bool = False,
 ) -> pd.DataFrame:
     """Process inspection result into pd.DataFrame."""
     if not inspection_results:
         return ValueError("Empty iterable provided.")
-    
+
     exclude = exclude or []
     apply = apply or ()
-    
-    df = json_normalize(inspection_results, sep = "__")  # each row resembles InspectionResult
-    
+
+    df = json_normalize(
+        inspection_results, sep="__"
+    )  # each row resembles InspectionResult
+
     if len(df) <= 1:
         return df
-    
+
     for regex, func in apply:
         for col in df.filter(regex=regex).columns:
             df[col] = df[col].apply(func)
-    
+
     keys = [k for k in inspection_results[0] if not k in exclude]
     for k in keys:
         if k in exclude:
             continue
         d = df.filter(regex=k)
         p = profile(d)
-        
-        rejected = p.description_set['variables'] \
-            .query("distinct_count <= 1 & type != 'UNSUPPORTED'") \
-            .filter(regex="^((?!version).)*$", axis=0)  # explicitly include versions
-        
+
+        rejected = (
+            p.description_set["variables"]
+            .query("distinct_count <= 1 & type != 'UNSUPPORTED'")
+            .filter(regex="^((?!version).)*$", axis=0)
+        )  # explicitly include versions
+
         if verbose:
             print("Rejected columns: ", rejected.index)
-        
+
         if drop:
             df.drop(rejected.index, axis=1, inplace=True)
-        
-    df = df \
-        .eval("status__job__duration   = status__job__finished_at   - status__job__started_at", engine='python') \
-        .eval("status__build__duration = status__build__finished_at - status__build__started_at", engine='python')
-        
+
+    df = (
+        df.eval(
+            "status__job__duration   = status__job__finished_at   - status__job__started_at",
+            engine="python"
+        )
+        .eval(
+            "status__build__duration = status__build__finished_at - status__build__started_at",
+            engine="python"
+        )
+    )
+
     return df
+
 
 # %%
 df = process_inspection_results(
     inspection_results,
-    exclude=['build_log', 'created', 'inspection_id'],
-    apply=[
-        ("created|started_at|finished_at", pd.to_datetime)
-    ]
+    exclude=["build_log", "created", "inspection_id"],
+    apply=[("created|started_at|finished_at", pd.to_datetime)],
 )
 
 # %% [markdown]
@@ -369,16 +404,18 @@ df = process_inspection_results(
 # ## Profile InspectionRun duration
 
 # %%
-df_duration = df.filter(like='duration') \
-    .rename(columns=lambda s: s.replace("status__", "").replace("__", "_")) \
+df_duration = (
+    df.filter(like="duration")
+    .rename(columns=lambda s: s.replace("status__", "").replace("__", "_"))
     .apply(lambda ts: pd.to_timedelta(ts).dt.total_seconds())
+)
 
 # %%
 p = profile(df_duration)
 p
 
 # %%
-stats = p.description_set['variables'].drop(["histogram", "mini_histogram"], axis=1)
+stats = p.description_set["variables"].drop(["histogram", "mini_histogram"], axis=1)
 stats
 
 # %% [markdown]
@@ -388,88 +425,100 @@ stats
 # Make sure that the versions are constant
 
 # %%
-df.filter(regex='python.*version').drop_duplicates()
+df.filter(regex="python.*version").drop_duplicates()
 
 # %% [markdown]
 # Visualize statistics
 
 # %%
 fig = df_duration.iplot(
-    kind='box',
+    kind="box", title="InspectionRun duration", yTitle="duration [s]", asFigure=True
+)
+
+# %%
+df_duration.iplot(
+    fill="tonexty",
+    kind="scatter",
     title="InspectionRun duration",
     yTitle="duration [s]",
-    asFigure=True,
 )
 
 # %%
-df_duration \
-    .iplot(
-    fill='tonexty',
-    kind='scatter',
-    title="InspectionRun duration",
-    yTitle="duration [s]"
+df_duration = (
+    df_duration.eval(
+        "job_duration_mean           = job_duration.mean()", engine="python"
+    )
+    .eval("build_duration_mean         = build_duration.mean()", engine="python")
+    .eval(
+        "job_duration_upper_bound    = job_duration + job_duration.std()",
+        engine="python",
+    )
+    .eval(
+        "job_duration_lower_bound    = job_duration - job_duration.std()",
+        engine="python",
+    )
+    .eval(
+        "build_duration_upper_bound  = build_duration + build_duration.std()",
+        engine="python",
+    )
+    .eval(
+        "build_duration_lower_bound  = build_duration - build_duration.std()",
+        engine="python",
+    )
 )
-
-# %%
-df_duration = df_duration \
-    .eval("job_duration_mean           = job_duration.mean()", engine='python') \
-    .eval("build_duration_mean         = build_duration.mean()", engine='python') \
-    .eval("job_duration_upper_bound    = job_duration + job_duration.std()", engine='python') \
-    .eval("job_duration_lower_bound    = job_duration - job_duration.std()", engine='python') \
-    .eval("build_duration_upper_bound  = build_duration + build_duration.std()", engine='python') \
-    .eval("build_duration_lower_bound  = build_duration - build_duration.std()", engine='python')
 
 upper_bound = go.Scatter(
-    name='Upper Bound',
+    name="Upper Bound",
     x=df_duration.index,
     y=df_duration.job_duration_upper_bound,
-    mode='lines',
+    mode="lines",
     marker=dict(color="lightgray"),
     line=dict(width=0),
-    fillcolor='rgba(68, 68, 68, 0.3)',
-    fill='tonexty' )
+    fillcolor="rgba(68, 68, 68, 0.3)",
+    fill="tonexty",
+)
 
 trace = go.Scatter(
-    name='Duration',
+    name="Duration",
     x=df_duration.index,
     y=df_duration.job_duration,
-    mode='lines',
-    line=dict(color='rgb(31, 119, 180)'),
-    fillcolor='rgba(68, 68, 68, 0.3)',
-    fill='tonexty' )
+    mode="lines",
+    line=dict(color="rgb(31, 119, 180)"),
+    fillcolor="rgba(68, 68, 68, 0.3)",
+    fill="tonexty",
+)
 
 lower_bound = go.Scatter(
-    name='Lower Bound',
+    name="Lower Bound",
     x=df_duration.index,
     y=df_duration.job_duration_lower_bound,
     marker=dict(color="lightgray"),
     line=dict(width=0),
-    mode='lines')
+    mode="lines",
+)
 
 data = [lower_bound, trace, upper_bound]
 
-m = stats.loc['job_duration']['mean']
+m = stats.loc["job_duration"]["mean"]
 layout = go.Layout(
-    yaxis=dict(title='duration [s]'),
+    yaxis=dict(title="duration [s]"),
     shapes=[
         {
-            'type': 'line',
-            'x0': 0,
-            'x1': len(df_duration.index),
-            'y0': m,
-            'y1': m,
-            'line': {
-                'color': 'red',
-                'dash': 'longdash'
-            }
+            "type": "line",
+            "x0": 0,
+            "x1": len(df_duration.index),
+            "y0": m,
+            "y1": m,
+            "line": {"color": "red", "dash": "longdash"},
         }
     ],
-    title='InspectionRun job duration',
-    showlegend = False)
+    title="InspectionRun job duration",
+    showlegend=False,
+)
 
 fig = go.Figure(data=data, layout=layout)
 
-iplot(fig, filename='pandas-time-series-error-bars')
+iplot(fig, filename="pandas-time-series-error-bars")
 
 # %%
 bins = np.lib.histograms._hist_bin_auto(df_duration.job_duration.values, None)
@@ -478,8 +527,8 @@ df_duration.job_duration.iplot(
     title="InspectionRun job distribution",
     xTitle="duration [s]",
     yTitle="count",
-    kind='hist',
-    bins=int(np.ceil(bins))
+    kind="hist",
+    bins=int(np.ceil(bins)),
 )
 
 # %% [markdown]
@@ -493,8 +542,8 @@ df_duration.job_duration.iplot(
 
 """Thoth InspectionRun dashboard app."""
 
-pd.set_option('precision', 4)
-pd.set_option('colheader_justify', 'center')
+pd.set_option("precision", 4)
+pd.set_option("colheader_justify", "center")
 
 
 def create_duration_dataframe(inspection_df: pd.DataFrame):
@@ -508,67 +557,100 @@ def create_duration_dataframe(inspection_df: pd.DataFrame):
         pass
 
     data = (
-        inspection_df
-        .filter(like="duration")
+        inspection_df.filter(like="duration")
         .rename(columns=lambda s: s.replace("status__", "").replace("__", "_"))
         .apply(lambda ts: pd.to_timedelta(ts).dt.total_seconds())
     )
-    
+
     def compute_duration_stats(group):
         return (
-            group
-            .eval("job_duration_mean           = job_duration.mean()", engine="python")
-            .eval("job_duration_upper_bound    = job_duration + job_duration.std()", engine="python")
-            .eval("job_duration_lower_bound    = job_duration - job_duration.std()", engine="python")
-            .eval("build_duration_mean         = build_duration.mean()", engine="python")
-            .eval("build_duration_upper_bound  = build_duration + build_duration.std()", engine="python")
-            .eval("build_duration_lower_bound  = build_duration - build_duration.std()", engine="python")
+            group.eval(
+                "job_duration_mean           = job_duration.mean()", engine="python"
+            )
+            .eval(
+                "job_duration_upper_bound    = job_duration + job_duration.std()",
+                engine="python",
+            )
+            .eval(
+                "job_duration_lower_bound    = job_duration - job_duration.std()",
+                engine="python",
+            )
+            .eval(
+                "build_duration_mean         = build_duration.mean()", engine="python"
+            )
+            .eval(
+                "build_duration_upper_bound  = build_duration + build_duration.std()",
+                engine="python",
+            )
+            .eval(
+                "build_duration_lower_bound  = build_duration - build_duration.std()",
+                engine="python",
+            )
         )
-    
+
     if isinstance(inspection_df.index, pd.MultiIndex):
         n_levels = len(inspection_df.index.levels)
 
         # compute duration stats for each group separately
-        data = data.groupby(level=list(range(n_levels - 1)), sort=False).apply(compute_duration_stats)
+        data = data.groupby(level=list(range(n_levels - 1)), sort=False).apply(
+            compute_duration_stats
+        )
     else:
         data = compute_duration_stats(data)
-    
+
     return data.round(4)
 
 
-def create_duration_box(data: pd.DataFrame, columns: Union[str, List[str]] = None, **kwargs):
+def create_duration_box(
+    data: pd.DataFrame, columns: Union[str, List[str]] = None, **kwargs
+):
     """Create duration Box plot."""
     columns = columns if columns is not None else data.filter(regex="duration$").columns
-    
+
     figure = data[columns].iplot(
-        kind="box", title=kwargs.pop("title", "InspectionRun duration"), yTitle="duration [s]", asFigure=True
+        kind="box",
+        title=kwargs.pop("title", "InspectionRun duration"),
+        yTitle="duration [s]",
+        asFigure=True,
     )
-    
+
     return figure
 
 
-def create_duration_scatter(data: pd.DataFrame, columns: Union[str, List[str]] = None, **kwargs):
+def create_duration_scatter(
+    data: pd.DataFrame, columns: Union[str, List[str]] = None, **kwargs
+):
     columns = columns if columns is not None else data.filter(regex="duration$").columns
-    
+
     figure = data[columns].iplot(
-        kind="scatter", title=kwargs.pop("title", "InspectionRun duration"), yTitle="duration [s]", asFigure=True
+        kind="scatter",
+        title=kwargs.pop("title", "InspectionRun duration"),
+        yTitle="duration [s]",
+        asFigure=True,
     )
-    
+
     return figure
 
 
-def create_duration_scatter_with_bounds(data: pd.DataFrame, col: str, index: Union[list, pd.Index, pd.RangeIndex] = None, **kwargs):
+def create_duration_scatter_with_bounds(
+    data: pd.DataFrame,
+    col: str,
+    index: Union[list, pd.Index, pd.RangeIndex] = None,
+    **kwargs,
+):
     """Create duration Scatter plot."""
     df_duration = (
         data[[col]]
         .eval(f"upper_bound = {col} + {col}.std()", engine="python")
         .eval(f"lower_bound = {col} - {col}.std()", engine="python")
     )
-    
+
     index = index if index is not None else df_duration.index
-    
+
     if isinstance(index, pd.MultiIndex):
-        index = index.levels[-1] if len(index.levels[-1]) == len(df) else np.arange(len(df))
+        index = (
+            index.levels[-1] if len(index.levels[-1]) == len(df) else np.arange(len(df))
+        )
 
     upper_bound = go.Scatter(
         name="Upper Bound",
@@ -624,12 +706,22 @@ def create_duration_scatter_with_bounds(data: pd.DataFrame, col: str, index: Uni
     return fig
 
 
-def create_duration_histogram(data: pd.DataFrame, columns: Union[str, List[str]] = None, bins: int = None, **kwargs):
+def create_duration_histogram(
+    data: pd.DataFrame,
+    columns: Union[str, List[str]] = None,
+    bins: int = None,
+    **kwargs,
+):
     """Create duration histogram."""
     columns = columns if columns is not None else data.filter(regex="duration$").columns
 
     if not bins:
-        bins = np.max([np.lib.histograms._hist_bin_auto(data[col].values, None) for col in columns])
+        bins = np.max(
+            [
+                np.lib.histograms._hist_bin_auto(data[col].values, None)
+                for col in columns
+            ]
+        )
 
     figure = data[columns].iplot(
         title=kwargs.pop("title", "InspectionRun distribution"),
@@ -645,32 +737,34 @@ def create_duration_histogram(data: pd.DataFrame, columns: Union[str, List[str]]
 # %%
 df = process_inspection_results(
     inspection_results,
-    exclude=['build_log', 'created', 'inspection_id'],
-    apply=[
-        ("created|started_at|finished_at", pd.to_datetime)
-    ]
+    exclude=["build_log", "created", "inspection_id"],
+    apply=[("created|started_at|finished_at", pd.to_datetime)],
 )
 
 # %%
 df_duration = create_duration_dataframe(df)
 
 # %%
-fig = create_duration_box(df_duration, ['build_duration', 'job_duration'])
+fig = create_duration_box(df_duration, ["build_duration", "job_duration"])
 
 py.iplot(fig)
 
 # %%
-fig = create_duration_scatter(df_duration, 'job_duration', title="InspectionRun job duration")
+fig = create_duration_scatter(
+    df_duration, "job_duration", title="InspectionRun job duration"
+)
 
 py.iplot(fig)
 
 # %%
-fig = create_duration_scatter(df_duration, 'build_duration', title="InspectionRun build duration")
+fig = create_duration_scatter(
+    df_duration, "build_duration", title="InspectionRun build duration"
+)
 
 py.iplot(fig)
 
 # %%
-fig = create_duration_histogram(df_duration, ['job_duration'])
+fig = create_duration_histogram(df_duration, ["job_duration"])
 
 py.iplot(fig)
 
@@ -683,59 +777,64 @@ py.iplot(fig)
 # The goal of this part is to have a function which divides inspection jobs into “categories”, the function accepts loaded inspection JSON files and a key which should be used to split input inspection documents.
 
 # %% {"code_folding": [0]}
-def _resolve_query(query: str, context: pd.DataFrame = None, resolvers: tuple = None, engine:str = None, parser: str = "pandas"):
+def _resolve_query(
+    query: str,
+    context: pd.DataFrame = None,
+    resolvers: tuple = None,
+    engine: str = None,
+    parser: str = "pandas",
+):
     """Resolve query in the given context."""
-    import re
     from pandas.core.computation.expr import Expr
     from pandas.core.computation.eval import _ensure_scope
-    
+
     if not query:
         return context
-    
+
     q = query
     q = re.sub(r"\[\(", "", q)
     q = re.sub(r"\b(\d)+\b", "", q)
     q = re.sub(r"[+\-\*:!<>=~.|&%]", " ", q)
-    
+
     # get our (possibly passed-in) scope
     resolvers = resolvers or ()
     if isinstance(context, pd.DataFrame):
         index_resolvers = context._get_index_resolvers()
         resolvers = tuple(resolvers) + (dict(context.iteritems()), index_resolvers)
-    
+
     repl = []
     for idx, resolver in enumerate(resolvers):
         keys = resolver.keys()
-        
+
         for op in set(q.split()):
             matches = [(op, k) for k in keys if re.search(op, k)]
 
             if len(matches) == 1:
                 op, key = matches[0]
                 repl.append((idx, op, resolver[key]))
-                
+
             elif len(matches) > 1:
                 raise KeyError(f"Ambiguous query operand provided: `{op}`")
-    
+
     for idx, op, val in repl:
         resolvers[idx][op] = val
-    
+
     env = _ensure_scope(level=1, resolvers=resolvers, target=context)
     expr = Expr(query, engine=engine, parser=parser, env=env)
-    
+
     def _resolve_operands(operands) -> list:
         for op in operands:
             # complex query
             if op.is_scalar:
                 continue
-                
-            if hasattr(op, 'operands'):
+
+            if hasattr(op, "operands"):
                 yield from _resolve_operands(op.operands)
-                
+
             yield str(op)
-            
+
     operands = set(_resolve_operands(expr.terms.operands))
-    
+
     for op in operands:
         try:
             query = query.replace(op, env.resolvers[op].name)
@@ -746,13 +845,15 @@ def _resolve_query(query: str, context: pd.DataFrame = None, resolvers: tuple = 
 
 
 # %% {"code_folding": [0]}
-def group_inspection_dataframe(inspection_df: pd.DataFrame, groupby: Union[str, list, set] = None, exclude: Union[str, list, set] = None):
+def group_inspection_dataframe(
+    inspection_df: pd.DataFrame,
+    groupby: Union[str, list, set] = None,
+    exclude: Union[str, list, set] = None,
+):
     """"""
-    import re
-    
     groupby = groupby or []
     exclude = exclude or []
-    
+
     if isinstance(groupby, str):
         groupby = [groupby]
 
@@ -766,7 +867,9 @@ def group_inspection_dataframe(inspection_df: pd.DataFrame, groupby: Union[str, 
         columns = inspection_df.columns[columns_idx]
 
         if not len(columns):
-            raise KeyError(f"Could NOT find suitable column given the keys: `{groupby}`")
+            raise KeyError(
+                f"Could NOT find suitable column given the keys: `{groupby}`"
+            )
 
         groups.extend(columns)
 
@@ -800,15 +903,14 @@ def group_inspection_dataframe(inspection_df: pd.DataFrame, groupby: Union[str, 
     index = pd.MultiIndex.from_tuples(levels, names=[*index_groups, None])
 
     return (
-        inspection_df
-        .set_index(index)
-        .drop(index_groups, axis=1)
-        .sort_index(level=-1)
+        inspection_df.set_index(index).drop(index_groups, axis=1).sort_index(level=-1)
     )
 
 
 # %% {"code_folding": [0]}
-def filter_inspection_dataframe(inspection_df: pd.DataFrame, like: str = None, regex: str = None, axis: int = None):
+def filter_inspection_dataframe(
+    inspection_df: pd.DataFrame, like: str = None, regex: str = None, axis: int = None
+):
     """"""
     if not any([like, regex]):
         return inspection_df
@@ -820,7 +922,7 @@ def filter_inspection_dataframe(inspection_df: pd.DataFrame, like: str = None, r
         filtered_df = filtered_df.join(inspection_df.filter(like="duration"))
 
     inspection_df = filtered_df
-        
+
     return inspection_df
 
 
@@ -835,7 +937,7 @@ def query_inspection_dataframe(
     regex: str = None,
     axis: int = None,
     sort_index: Union[bool, int, List[int]] = True,
-    engine: str = None
+    engine: str = None,
 ) -> pd.DataFrame:
     """Query inspection DataFrame.
     
@@ -857,29 +959,30 @@ def query_inspection_dataframe(
     """
     # resolve query
     inspection_df = _resolve_query(query=query, context=inspection_df)
-     
+
     if groupby:
-        inspection_df = group_inspection_dataframe(inspection_df, groupby=groupby, exclude=exclude)
-        
+        inspection_df = group_inspection_dataframe(
+            inspection_df, groupby=groupby, exclude=exclude
+        )
+
     # filter
     df = filter_inspection_dataframe(inspection_df, like=like, regex=regex, axis=axis)
-    
+
     if sort_index:
         if isinstance(sort_index, bool):
-            levels = np.arange(df.index.nlevels -1).tolist()
+            levels = np.arange(df.index.nlevels - 1).tolist()
         else:
             levels = sort_index
-            
+
         return df.sort_index(level=levels)
+
 
 # %%
 df = process_inspection_results(
     inspection_results,
-    exclude=['build_log', 'created', 'inspection_id'],
-    apply=[
-        ("created|started_at|finished_at", pd.to_datetime)
-    ],
-    drop=False
+    exclude=["build_log", "created", "inspection_id"],
+    apply=[("created|started_at|finished_at", pd.to_datetime)],
+    drop=False,
 )
 
 # %% [markdown]
@@ -898,19 +1001,29 @@ query_inspection_dataframe(df, groupby=["ncpus", "platform"], exclude="node")
 # And finally if we are only interested in certain columns, we can filter them as well
 
 # %%
-query_inspection_dataframe(df, groupby=["platform", "ncpus"], like="duration", exclude="node")
+query_inspection_dataframe(
+    df, groupby=["platform", "ncpus"], like="duration", exclude="node"
+)
 
 # %% [markdown]
 # Full-fledged filtering example can also filter based on the values
 
 # %%
-query_inspection_dataframe(df, query="ncpus == 32", groupby=["platform", "ncpus"], like="duration", exclude="node")
+query_inspection_dataframe(
+    df,
+    query="ncpus == 32",
+    groupby=["platform", "ncpus"],
+    like="duration",
+    exclude="node",
+)
 
 # %% [markdown]
 # ### Grouping based on exit status
 
 # %%
-query_inspection_dataframe(df, like="job", groupby=["reason", "exit_code"], exclude="build")
+query_inspection_dataframe(
+    df, like="job", groupby=["reason", "exit_code"], exclude="build"
+)
 
 # %% [markdown]
 # ### Creation of duration dataframe from filtered inspection results
@@ -924,7 +1037,7 @@ filtered_df = query_inspection_dataframe(
     groupby=["platform", "ncpus"],
     like="duration",
     query="ncpus == 32 | ncpus == 64",
-    exclude=["node", "platform__version"]
+    exclude=["node", "platform__version"],
 )
 
 df_duration = create_duration_dataframe(filtered_df)
@@ -935,53 +1048,63 @@ df_duration.head()
 # ## Visualizing grouped data
 
 # %% {"code_folding": [0, 25, 43]}
-def get_column_group(df: pd.DataFrame, columns: Union[List[Union[str, int]], pd.Index] = None, label: str = None) -> pd.DataFrame:
+def get_column_group(
+    df: pd.DataFrame,
+    columns: Union[List[Union[str, int]], pd.Index] = None,
+    label: str = None,
+) -> pd.DataFrame:
     """"""
     columns = columns or df.columns
-    
+
     if all(isinstance(c, int) for c in columns):
         columns = [df.columns[i] for i in columns]
-    
+
     if not label:
-        cols = [col.split('_') for col in columns]
-        
+        cols = [col.split("_") for col in columns]
+
         common_words = set(functools.reduce(np.intersect1d, cols))
         if common_words:
-            label = "_".join(w for w in cols[0] if w in common_words).strip('_')
+            label = "_".join(w for w in cols[0] if w in common_words).strip("_")
         else:
             label = str(tuple(columns))
-    
+
     Group = namedtuple("Group", columns)
-    
+
     groups = []
     for i, row in df[columns].iterrows():
         groups.append(Group(*row))
-    
+
     return pd.Series(groups, name=label)
 
 
-def get_index_group(df: pd.DataFrame, names: List[Union[str, int]] = None, label: str = None) -> pd.Series:
+def get_index_group(
+    df: pd.DataFrame, names: List[Union[str, int]] = None, label: str = None
+) -> pd.Series:
     """"""
     names = names or list(filter(bool, df.index.names[:-1]))
-    
+
     if all(isinstance(n, int) for n in names):
         names = [df.index.names[i] for i in names]
-    
+
     index = df.index.to_frame(index=False)
     group = get_column_group(index[names])
-    
+
     index = index.drop(columns=names)
     group_indices = pd.DataFrame(group).join(index).values.tolist()
 
-    group_index = pd.MultiIndex.from_tuples(group_indices, names=[group.name, *index.columns[:-1], None])
-    
+    group_index = pd.MultiIndex.from_tuples(
+        group_indices, names=[group.name, *index.columns[:-1], None]
+    )
+
     return group_index
 
 
-def set_index_group(df: pd.DataFrame, names: List[Union[str, int]] = None, label: str = None) -> pd.DataFrame:
+def set_index_group(
+    df: pd.DataFrame, names: List[Union[str, int]] = None, label: str = None
+) -> pd.DataFrame:
     """"""
     group_index = get_index_group(df, names, label)
-    
+
     return df.set_index(group_index)
 
 
@@ -990,30 +1113,32 @@ def set_index_group(df: pd.DataFrame, names: List[Union[str, int]] = None, label
 
 # %% {"code_folding": [6]}
 def make_subplots(
-    data: pd.DataFrame,
-    columns: List[str] = None,
-    *,
-    kind: str = 'box',
-    **kwargs
+    data: pd.DataFrame, columns: List[str] = None, *, kind: str = "box", **kwargs
 ):
     """"""
-    if kind not in ('box', 'histogram', 'scatter', 'scatter_with_bounds'):
+    if kind not in ("box", "histogram", "scatter", "scatter_with_bounds"):
         raise ValueError(f"Can NOT handle plot of kind: {kind}.")
 
     index = data.index.droplevel(-1).unique()
 
     if len(index.names) > 2:
         logger.warning(
-            f"Can only handle hierarchical index of depth <= 2, got {len(index.names)}. Grouping index.")
+            f"Can only handle hierarchical index of depth <= 2, got {len(index.names)}. Grouping index."
+        )
 
-        return make_subplots(set_index_group(data, range(index.nlevels - 1)), columns, kind=kind, **kwargs)
+        return make_subplots(
+            set_index_group(data, range(index.nlevels - 1)),
+            columns,
+            kind=kind,
+            **kwargs,
+        )
 
     grid = ff.create_facet_grid(
         data.reset_index(),
         facet_row=index.names[1] if index.nlevels > 1 else None,
         facet_col=index.names[0],
-        trace_type='box',  # box does not need data specification
-        ggplot2=True
+        trace_type="box",  # box does not need data specification
+        ggplot2=True,
     )
 
     shape = np.shape(grid._grid_ref)[:-1]
@@ -1030,17 +1155,19 @@ def make_subplots(
         index_grid = zip(*index.labels)
     else:
         index_grid = itertools.product(np.arange(shape[1]), repeat=2)
-        
+
     for idx, grp in data.groupby(level=np.arange(index.nlevels).tolist()):
-        if not isinstance(columns, str) and kind == 'scatter_with_bounds':
+        if not isinstance(columns, str) and kind == "scatter_with_bounds":
             if columns is None:
                 raise ValueError(
-                    "`scatter_with_bounds` requires `col` argument, not provided.")
+                    "`scatter_with_bounds` requires `col` argument, not provided."
+                )
             try:
-                columns, = columns 
+                columns, = columns
             except ValueError:
                 raise ValueError(
-                    "`scatter_with_bounds` does not allow for multiple columns.")
+                    "`scatter_with_bounds` does not allow for multiple columns."
+                )
 
         fig = eval(f"create_duration_{kind}(grp, columns, **kwargs)")
 
@@ -1053,39 +1180,42 @@ def make_subplots(
         title=kwargs.get("title", fig.layout.title),
         shapes=grid.layout.shapes,
         annotations=grid.layout.annotations,
-        showlegend=False
+        showlegend=False,
     )
-    
-    x_dom_vals = [k for k in layout.to_plotly_json().keys() if 'xaxis' in k]
-    y_dom_vals = [k for k in layout.to_plotly_json().keys() if 'yaxis' in k]
-    
-    layout_shapes = pd.DataFrame(layout.to_plotly_json()['shapes']).sort_values(['x0', 'y0'])
+
+    x_dom_vals = [k for k in layout.to_plotly_json().keys() if "xaxis" in k]
+    y_dom_vals = [k for k in layout.to_plotly_json().keys() if "yaxis" in k]
+
+    layout_shapes = pd.DataFrame(layout.to_plotly_json()["shapes"]).sort_values(
+        ["x0", "y0"]
+    )
 
     h_shapes = layout_shapes[~layout_shapes.x0.duplicated(keep=False)]
     v_shapes = layout_shapes[~layout_shapes.y0.duplicated(keep=False)][::-1]
 
     # update axis domains and layout
     for idx, x_axis in enumerate(x_dom_vals):
-        x0, x1 = h_shapes.iloc[idx % shape[1]][['x0', 'x1']]
-        
+        x0, x1 = h_shapes.iloc[idx % shape[1]][["x0", "x1"]]
+
         layout[x_axis].domain = (x0 + 0.03, x1 - 0.03)
         layout[x_axis].update(showticklabels=False, zeroline=False)
 
     for idx, y_axis in enumerate(y_dom_vals):
-        y0, y1 = v_shapes.iloc[idx % shape[0]][['y0', 'y1']]
-        
+        y0, y1 = v_shapes.iloc[idx % shape[0]][["y0", "y1"]]
+
         layout[y_axis].domain = (y0 + 0.03, y1 - 0.03)
         layout[y_axis].update(zeroline=False)
-    
+
     for annot in layout.annotations:
-        annot['text'] = re.sub(r"^(.{10}).*(.{10})$", "\g<1>...\g<2>", annot['text'])
+        annot["text"] = re.sub(r"^(.{10}).*(.{10})$", "\g<1>...\g<2>", annot["text"])
 
     # custom user layout updates
-    user_layout = kwargs.pop('layout', None)
+    user_layout = kwargs.pop("layout", None)
     if user_layout:
         layout.update(user_layout)
 
     return sub_plots
+
 
 # %%
 d = query_inspection_dataframe(df, groupby=["platform", "ncpus"], exclude="node")
@@ -1094,6 +1224,6 @@ d = create_duration_dataframe(d)
 display(d.head())
 
 # fele free to try different values {box, histogram, scatter, scatter_with_bounds}
-fig = make_subplots(data=d, kind='box')
+fig = make_subplots(data=d, kind="box")
 
 py.iplot(fig)
