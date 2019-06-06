@@ -249,7 +249,7 @@ for document_id, document in inspection_store.iterate_results():
 # We can perform profiling as the first stage of this analysis to identify constants which won't affect the prediction.
 
 # %%
-f"The original DataFrame contains  {len(df.columns)}  columns"
+f"The original DataFrame contains  {len(inspection_results)}  columns"
 
 # %% [markdown]
 # These are the top-level keys:
@@ -844,11 +844,28 @@ def _resolve_query(
     return context.query(query)
 
 
-# %% {"code_folding": [0]}
+# %% {"code_folding": [16]}
+def _is_valid_group(df: pd.DataFrame, groupby: Union[str, List[str]]):
+    """"""
+    is_valid = False
+    try:
+        # check that grouping is possible
+        is_valid = len(df.groupby(groupby).indices) >= 1
+        if not is_valid:
+            logger.warning(f"Column '{groupby!s}' could NOT be used as index group. Dropped.")
+    
+    except TypeError:
+        logger.warning(f"Column '{groupby!s}' dtype NOT understood. Dropped")
+    
+    return is_valid
+
+
 def group_inspection_dataframe(
     inspection_df: pd.DataFrame,
     groupby: Union[str, list, set] = None,
     exclude: Union[str, list, set] = None,
+    as_group: bool = False,
+    as_index: bool = False,
 ):
     """"""
     groupby = groupby or []
@@ -880,18 +897,18 @@ def group_inspection_dataframe(
         if any(re.search(e, col) for e in exclude):
             continue
 
-        try:
-            # check that grouping is possible
-            inspection_df.groupby(col).indices
-
+        if _is_valid_group(inspection_df, col):
             index_groups.append(col)
-        except TypeError:
-            logger.warning(f"Column '{col}' dtype NOT understood. Dropped.")
 
     index_groups = pd.Series(index_groups).unique().tolist()
 
     # construct multi-index if grouping is requested
-    indices = inspection_df.groupby(index_groups).indices
+    group = inspection_df.groupby(index_groups)
+    
+    if as_group:
+        return group
+    
+    indices = group.indices
 
     levels = []
     for level, values in indices.items():
@@ -901,16 +918,19 @@ def group_inspection_dataframe(
             levels.extend([(level, v) for v in values])
 
     index = pd.MultiIndex.from_tuples(levels, names=[*index_groups, None])
+    
+    if as_index:
+        return index
 
     return (
         inspection_df.set_index(index).drop(index_groups, axis=1).sort_index(level=-1)
     )
 
 
-# %% {"code_folding": [0]}
+# %% {"code_folding": [0, 2]}
 def filter_inspection_dataframe(
     inspection_df: pd.DataFrame, like: str = None, regex: str = None, axis: int = None
-):
+) -> pd.DataFrame:
     """"""
     if not any([like, regex]):
         return inspection_df
@@ -1047,7 +1067,7 @@ df_duration.head()
 # %% [markdown]
 # ## Visualizing grouped data
 
-# %% {"code_folding": [0, 25, 43]}
+# %% {"code_folding": [0]}
 def get_column_group(
     df: pd.DataFrame,
     columns: Union[List[Union[str, int]], pd.Index] = None,
@@ -1065,6 +1085,9 @@ def get_column_group(
         common_words = set(functools.reduce(np.intersect1d, cols))
         if common_words:
             label = "_".join(w for w in cols[0] if w in common_words).strip("_")
+            
+            if len(label) <= 0:
+                label = str(tuple(columns))
         else:
             label = str(tuple(columns))
 
@@ -1146,16 +1169,18 @@ def make_subplots(
     sub_plots = tools.make_subplots(
         rows=shape[0],
         cols=shape[1],
-        shared_yaxes=True,
-        shared_xaxes=False,
-        print_grid=False,
+        shared_yaxes=kwargs.pop("shared_yaxes", True),
+        shared_xaxes=kwargs.pop("shared_xaxes", False),
+        print_grid=kwargs.pop("print_grid", False),
     )
 
     if isinstance(index, pd.MultiIndex):
         index_grid = zip(*index.labels)
     else:
-        index_grid = itertools.product(np.arange(shape[1]), repeat=2)
-
+        index_grid = iter(np.transpose([
+            np.tile(np.arange(shape[1]), shape[0]), np.repeat(np.arange(shape[0]), shape[1])
+        ]))
+        
     for idx, grp in data.groupby(level=np.arange(index.nlevels).tolist()):
         if not isinstance(columns, str) and kind == "scatter_with_bounds":
             if columns is None:
@@ -1171,7 +1196,7 @@ def make_subplots(
 
         fig = eval(f"create_duration_{kind}(grp, columns, **kwargs)")
 
-        row, col = map(int, next(index_grid))
+        col, row = map(int, next(index_grid))  # col-first plotting
         for trace in fig.data:
             sub_plots.append_trace(trace, row + 1, col + 1)
 
@@ -1191,7 +1216,11 @@ def make_subplots(
     )
 
     h_shapes = layout_shapes[~layout_shapes.x0.duplicated(keep=False)]
-    v_shapes = layout_shapes[~layout_shapes.y0.duplicated(keep=False)][::-1]
+    v_shapes = layout_shapes[~layout_shapes.y0.duplicated(keep=False)]
+    
+    # handle single-columns
+    h_shapes = h_shapes.query("y1 - y0 != 1")
+    v_shapes = v_shapes.query("x1 - x0 != 1")
 
     # update axis domains and layout
     for idx, x_axis in enumerate(x_dom_vals):
@@ -1205,9 +1234,27 @@ def make_subplots(
 
         layout[y_axis].domain = (y0 + 0.03, y1 - 0.03)
         layout[y_axis].update(zeroline=False)
-
-    for annot in layout.annotations:
-        annot["text"] = re.sub(r"^(.{10}).*(.{10})$", "\g<1>...\g<2>", annot["text"])
+        
+    # correct annotation to match the relevant group and width
+    annot_df = pd.DataFrame(layout.to_plotly_json()['annotations']).sort_values(['x', 'y'])
+    annot_df = annot_df[annot_df.text.str.len() > 0]
+    
+    aw = int(max(60 / shape[1] - ( 2 * shape[1]), 6))  # annotation width magic
+    
+    for i, annot_idx in enumerate(annot_df.index):
+        annot = layout.annotations[annot_idx]
+        
+        text = annot["text"]
+        if isinstance(index, pd.MultiIndex):
+            index_axis = i >= shape[1]
+            if shape[0] == 1:
+                pass  # no worries, the order is aight
+            elif shape[1] == 1:
+                text: str = str(index.levels[index_axis][max(0, i - 1)])
+            else:
+                text: str = str(index.levels[index_axis][i % shape[1]])
+        
+        annot["text"] = re.sub(r"^(.{%d}).*(.{%d})$" % (aw, aw), "\g<1>...\g<2>", text)
 
     # custom user layout updates
     user_layout = kwargs.pop("layout", None)
@@ -1221,9 +1268,6 @@ def make_subplots(
 d = query_inspection_dataframe(df, groupby=["platform", "ncpus"], exclude="node")
 d = create_duration_dataframe(d)
 
-display(d.head())
-
-# fele free to try different values {box, histogram, scatter, scatter_with_bounds}
-fig = make_subplots(data=d, kind="box")
+fig = make_subplots(d)
 
 py.iplot(fig)
