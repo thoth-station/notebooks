@@ -39,7 +39,7 @@
 
 # %% [markdown]
 # ---
-# %%
+# %% {"init_cell": true}
 import logging
 import functools
 import re
@@ -55,7 +55,7 @@ from prettyprinter import pformat
 
 logger = logging.getLogger()
 
-# %% {"require": ["notebook/js/codecell"]}
+# %% {"require": ["notebook/js/codecell"], "init_cell": true}
 import pandas as pd
 import numpy as np
 
@@ -67,7 +67,7 @@ pd.set_option("max_colwidth", 800)
 pd.set_option("display.max_rows", None)
 pd.set_option("display.max_columns", None)
 
-# %%
+# %% {"init_cell": true}
 import cufflinks as cf
 import plotly
 import plotly.offline as py
@@ -90,13 +90,13 @@ cf.go_offline()
 # %% [markdown]
 # ## Retrieve inspection jobs from Ceph
 
-# %%
+# %% {"init_cell": true}
 %env THOTH_DEPLOYMENT_NAME     thoth-core-upshift-stage
 %env THOTH_CEPH_BUCKET         thoth
 %env THOTH_CEPH_BUCKET_PREFIX  data/thoth
 %env THOTH_S3_ENDPOINT_URL     https://s3.upshift.redhat.com/
 
-# %%
+# %% {"init_cell": true}
 inspection_store = InspectionResultsStore(region="eu-central-1")
 inspection_store.connect()
 
@@ -240,10 +240,10 @@ filter_dfs(df_structure, "script_sha256")
 
 # %% [markdown] {"hidden": true}
 # ---
-# %% [markdown]
+# %% [markdown] {"heading_collapsed": true}
 # ## Mapping InspectionRun JSON to pandas DataFrame
 
-# %%
+# %% {"init_cell": true, "hidden": true}
 inspection_results = []
 
 for document_id, document in inspection_store.iterate_results():
@@ -252,102 +252,102 @@ for document_id, document in inspection_store.iterate_results():
 
     inspection_results.append(document)
 
-# %%
+# %% {"init_cell": true, "hidden": true}
 df = json_normalize(inspection_results, sep = ".")  # each row resembles InspectionResult
 df
 
-# %% [markdown]
+# %% [markdown] {"hidden": true}
 # ### Feature importance analysis
 #
 # For the purposes of the performance analysis we take under consideration the impact of a variable on the performance score, the variance of the features is therefore an important indicator. We can assume that the more variance feature evinces, the higher is its impact on the performance measure stability.
 #
 # We can perform profiling as the first stage of this analysis to identify constants which won't affect the prediction.
 
-# %%
+# %% {"init_cell": true, "hidden": true}
 f"The original DataFrame contains  {len(inspection_results)}  columns"
 
-# %% [markdown]
+# %% [markdown] {"hidden": true}
 # These are the top-level keys:
 
-# %%
+# %% {"init_cell": true, "hidden": true}
 inspection_results[0].keys()
 
-# %% [markdown]
+# %% [markdown] {"hidden": true}
 # #### Status
 
-# %% {"require": ["base/js/events", "datatables.net", "d3", "jupyter-datatables"]}
+# %% {"require": ["base/js/events", "datatables.net", "d3", "jupyter-datatables"], "hidden": true}
 df_status = df.filter(regex="status")
 
 date_columns = df_status.filter(regex="started_at|finished_at").columns
 for col in date_columns:
     df_status[col] = df[col].apply(pd.to_datetime)
 
-# %%
+# %% {"hidden": true}
 p = profile(df_status)
 p
 
-# %% [markdown]
+# %% [markdown] {"hidden": true}
 # According to the profiling, we can drop the values with the constant value:
 
-# %%
+# %% {"hidden": true}
 rejected = p.description_set["variables"].query(
     "distinct_count <= 1 & type != 'UNSUPPORTED'"
 )
 rejected
 
-# %%
+# %% {"hidden": true}
 df.drop(rejected.index, axis=1, inplace=True)
 
-# %% [markdown]
+# %% [markdown] {"hidden": true}
 # #### Specification
 
-# %%
+# %% {"hidden": true}
 df_spec = df.filter(regex="specification")
 
-# %%
+# %% {"hidden": true}
 p = profile(df_spec)
 p
 
-# %%
+# %% {"hidden": true}
 rejected = p.description_set["variables"].query(
     "distinct_count <= 1 & type != 'UNSUPPORTED'"
 )
 rejected
 
-# %% [markdown]
+# %% [markdown] {"hidden": true}
 # exclude versions, we might wanna use them later on
 
-# %%
+# %% {"hidden": true}
 rejected = rejected.filter(regex="^((?!version).)*$", axis=0)
 rejected
 
-# %%
+# %% {"hidden": true}
 df.drop(rejected.index, axis=1, inplace=True)
 
-# %% [markdown]
+# %% [markdown] {"hidden": true}
 # #### Job log
 
-# %%
+# %% {"hidden": true}
 df_job = df.filter(regex="job_log")
 
-# %%
+# %% {"hidden": true}
 p = profile(df_job)
 p
 
-# %%
+# %% {"hidden": true}
 rejected = p.description_set["variables"].query(
     "distinct_count <= 1 & type != 'UNSUPPORTED'"
 )
 rejected
 
-# %%
+# %% {"hidden": true}
 df.drop(rejected.index, axis=1, inplace=True)
 
 
-# %% [markdown]
+# %% [markdown] {"hidden": true}
 # ---
 
-# %%
+# %% {"init_cell": true, "code_folding": [6], "hidden": true}
 def process_inspection_results(
     inspection_results: List[dict],
     exclude: Union[list, set] = None,
@@ -406,51 +406,51 @@ def process_inspection_results(
     return df
 
 
-# %%
+# %% {"hidden": true}
 df = process_inspection_results(
     inspection_results,
     exclude=["build_log", "created", "inspection_id"],
     apply=[("created|started_at|finished_at", pd.to_datetime)],
 )
 
-# %% [markdown]
+# %% [markdown] {"hidden": true}
 # ---
-# %% [markdown]
+# %% [markdown] {"heading_collapsed": true}
 # ## Profile InspectionRun duration
 
-# %%
+# %% {"hidden": true}
 df_duration = (
     df.filter(like="duration")
     .rename(columns=lambda s: s.replace("status__", "").replace("__", "_"))
     .apply(lambda ts: pd.to_timedelta(ts).dt.total_seconds())
 )
 
-# %%
+# %% {"hidden": true}
 p = profile(df_duration)
 p
 
-# %%
+# %% {"hidden": true}
 stats = p.description_set["variables"].drop(["histogram", "mini_histogram"], axis=1)
 stats
 
-# %% [markdown]
+# %% [markdown] {"heading_collapsed": true}
 # ## Plot InspectionRun duration
 
-# %% [markdown]
+# %% [markdown] {"hidden": true}
 # Make sure that the versions are constant
 
-# %%
+# %% {"hidden": true}
 df.filter(regex="python.*version").drop_duplicates()
 
-# %% [markdown]
+# %% [markdown] {"hidden": true}
 # Visualize statistics
 
-# %%
+# %% {"hidden": true}
 fig = df_duration.iplot(
     kind="box", title="InspectionRun duration", yTitle="duration [s]", asFigure=True
 )
 
-# %%
+# %% {"hidden": true}
 df_duration.iplot(
     fill="tonexty",
     kind="scatter",
@@ -458,7 +458,7 @@ df_duration.iplot(
     yTitle="duration [s]",
 )
 
-# %%
+# %% {"hidden": true}
 df_duration = (
     df_duration.eval(
         "job_duration_mean           = job_duration.mean()", engine="python"
@@ -535,7 +535,7 @@ fig = go.Figure(data=data, layout=layout)
 
 iplot(fig, filename="pandas-time-series-error-bars")
 
-# %%
+# %% {"hidden": true}
 bins = np.lib.histograms._hist_bin_auto(df_duration.job_duration.values, None)
 
 df_duration.job_duration.iplot(
@@ -546,13 +546,13 @@ df_duration.job_duration.iplot(
     bins=int(np.ceil(bins)),
 )
 
-# %% [markdown]
+# %% [markdown] {"hidden": true}
 # ---
 # %% [markdown]
 # ## Library usage
 
 
-# %% {"code_folding": [8, 47, 58, 67, 134]}
+# %% {"code_folding": [8, 65, 81, 100, 175], "init_cell": true}
 # -*- coding: utf-8 -*-
 
 """Thoth InspectionRun dashboard app."""
@@ -641,6 +641,7 @@ def create_duration_scatter(
         kind="scatter",
         title=kwargs.pop("title", "InspectionRun duration"),
         yTitle="duration [s]",
+        xTitle="inspection ID",
         asFigure=True,
     )
 
@@ -702,6 +703,7 @@ def create_duration_scatter_with_bounds(
 
     layout = go.Layout(
         yaxis=dict(title="duration [s]"),
+        xaxis=dict(title="inspection ID"),
         shapes=[
             {
                 "type": "line",
@@ -741,6 +743,7 @@ def create_duration_histogram(
     figure = data[columns].iplot(
         title=kwargs.pop("title", "InspectionRun distribution"),
         yTitle="count",
+        xTitle="durations [ms]",
         kind="hist",
         bins=int(np.ceil(bins)),
         asFigure=True,
@@ -789,7 +792,7 @@ py.iplot(fig)
 #
 # The goal of this part is to have a function which divides inspection jobs into “categories”, the function accepts loaded inspection JSON files and a key which should be used to split input inspection documents.
 
-# %% {"code_folding": [0]}
+# %% {"code_folding": [6], "init_cell": true}
 def _resolve_query(
     query: str,
     context: pd.DataFrame = None,
@@ -857,7 +860,7 @@ def _resolve_query(
     return context.query(query)
 
 
-# %% {"code_folding": [16]}
+# %% {"code_folding": [0, 21], "init_cell": true}
 def _is_valid_group(df: pd.DataFrame, groupby: Union[str, List[str]]):
     """"""
     is_valid = False
@@ -940,7 +943,7 @@ def group_inspection_dataframe(
     )
 
 
-# %% {"code_folding": [0, 2]}
+# %% {"code_folding": [2], "init_cell": true}
 def filter_inspection_dataframe(
     inspection_df: pd.DataFrame, like: str = None, regex: str = None, axis: int = None
 ) -> pd.DataFrame:
@@ -959,7 +962,7 @@ def filter_inspection_dataframe(
     return inspection_df
 
 
-# %% {"code_folding": [0, 11]}
+# %% {"code_folding": [11], "init_cell": true}
 def query_inspection_dataframe(
     inspection_df: List[dict],
     *,
@@ -1010,52 +1013,58 @@ def query_inspection_dataframe(
         return df.sort_index(level=levels)
 
 
-# %%
+# %% {"init_cell": true}
 df = process_inspection_results(
     inspection_results,
     exclude=["build_log", "created", "inspection_id"],
     apply=[("created|started_at|finished_at", pd.to_datetime)],
+    drop=False
 )
 
 # %% [markdown]
 # ### Grouping based on hardware platform
 
 # %%
-query_inspection_dataframe(df, groupby="hwinfo", exclude="node")
+d = query_inspection_dataframe(df, groupby="hwinfo", exclude="node")
+d.head()
 
 # %% [markdown]
 # It is also possible to group by multiple columns
 
 # %%
-query_inspection_dataframe(df, groupby=["ncpus", "platform"], exclude="node")
+d = query_inspection_dataframe(df, groupby=["ncpus", "platform"], exclude="node")
+d.head()
 
 # %% [markdown]
 # And finally if we are only interested in certain columns, we can filter them as well
 
 # %%
-query_inspection_dataframe(
+d = query_inspection_dataframe(
     df, groupby=["platform", "ncpus"], like="duration", exclude="node"
 )
+d.head()
 
 # %% [markdown]
 # Full-fledged filtering example can also filter based on the values
 
 # %%
-query_inspection_dataframe(
+d = query_inspection_dataframe(
     df,
     query="ncpus == 32",
     groupby=["platform", "ncpus"],
     like="duration",
     exclude="node",
 )
+d.head()
 
 # %% [markdown]
 # ### Grouping based on exit status
 
 # %%
-query_inspection_dataframe(
+d = query_inspection_dataframe(
     df, like="job", groupby=["reason", "exit_code"], exclude="build"
 )
+d.head()
 
 # %% [markdown]
 # ### Creation of duration dataframe from filtered inspection results
@@ -1079,7 +1088,7 @@ df_duration.head()
 # %% [markdown]
 # ## Visualizing grouped data
 
-# %% {"code_folding": [0]}
+# %% {"code_folding": [4, 34, 56], "init_cell": true}
 def get_column_group(
     df: pd.DataFrame,
     columns: Union[List[Union[str, int]], pd.Index] = None,
@@ -1146,7 +1155,7 @@ def set_index_group(
 # %% [markdown]
 # ---
 
-# %% {"code_folding": [6]}
+# %% {"code_folding": [], "init_cell": true}
 def make_subplots(
     data: pd.DataFrame, columns: List[str] = None, *, kind: str = "box", **kwargs
 ):
@@ -1274,6 +1283,28 @@ def make_subplots(
         annot["text"] = re.sub(r"^(.{%d}).*(.{%d})$" % (aw, aw), "\g<1>...\g<2>", text)
         annot["hovertext"] = "<br>".join(pformat(index_label).split("\n"))
         
+    # add axis titles as plot annotations
+    layout.annotations = (
+        *layout.annotations,
+        {
+            "x": 0.5,
+            "y": -0.05,
+            "xref": "paper",
+            "yref": "paper",
+            "text": fig.layout.xaxis["title"]["text"],
+            "showarrow": False
+        },
+        {
+            "x": -0.05,
+            "y": 0.5,
+            "xref": "paper",
+            "yref": "paper",
+            "text": fig.layout.yaxis["title"]["text"],
+            "textangle": -90,
+            "showarrow": False
+        },
+    )
+    
     # custom user layout updates
     user_layout = kwargs.pop("layout", None)
     if user_layout:
@@ -1283,7 +1314,7 @@ def make_subplots(
 
 
 # %%
-d = query_inspection_dataframe(df, groupby=["hwinfo", "release"], exclude="node")
+d = query_inspection_dataframe(df, groupby=["platform", "ncpus"], exclude="node")
 d = create_duration_dataframe(d)
 
 fig = make_subplots(d, kind="histogram", columns=["job_duration"])
@@ -1294,19 +1325,21 @@ py.iplot(fig)
 # ### Grouping based on software stack
 
 # %%
-query_inspection_dataframe(df, groupby=["specification__python__requirements_locked__default"])
+d = query_inspection_dataframe(df, groupby=["requirements_locked__default"])
+d.head(1)
 
 # %% [markdown]
 # ### Grouping based on OS system
 
 # %%
-query_inspection_dataframe(df, groupby=["base"], like="duration", exclude="node")
+d = query_inspection_dataframe(df, groupby=["base"], like="duration", exclude="node")
+d.head()
 
 
 # %% [markdown]
 # ## Further analysis
 
-# %%
+# %% {"init_cell": true, "code_folding": []}
 def show_categories(inspection_df):
     """List categories and if requested plot them"""
     index = inspection_df.index.droplevel(-1).unique()
@@ -1342,13 +1375,16 @@ dn = query_inspection_dataframe(df, groupby="platform", exclude="node")
 show_categories(dn)
 
 # %%
-dn = query_inspection_dataframe(df, groupby="hwinfo", exclude="node")
+dn = query_inspection_dataframe(df, groupby="Athlon", exclude="node")
 # Display the categories identified
 
 show_categories(dn)
 
 # %%
-dn = query_inspection_dataframe(df, groupby="job_log__hwinfo__platform__release", exclude="node")
+dn = query_inspection_dataframe(df, groupby="platform__release", exclude="node")
 # Display the categories identified
 
 show_categories(dn)
+
+# %% [markdown]
+# ---
