@@ -7,29 +7,35 @@
 #       extension: .py
 #       format_name: hydrogen
 #       format_version: '1.2'
-#       jupytext_version: 1.1.1
+#       jupytext_version: 1.1.4
 #   kernelspec:
-#     display_name: thoth-notebooks
+#     display_name: Python 3
 #     language: python
-#     name: thoth-notebooks
+#     name: python3
 # ---
 
 # %% [markdown] {"toc": true}
 # <h1>Table of Contents<span class="tocSkip"></span></h1>
-# <div class="toc"><ul class="toc-item"><li><span><a href="#Retrieve-inspection-jobs-from-Ceph" data-toc-modified-id="Retrieve-inspection-jobs-from-Ceph-1"><span class="toc-item-num">1&nbsp;&nbsp;</span>Retrieve inspection jobs from Ceph</a></span></li><li><span><a href="#Describe-the-structure-of-an-inspection-job-result" data-toc-modified-id="Describe-the-structure-of-an-inspection-job-result-2"><span class="toc-item-num">2&nbsp;&nbsp;</span>Describe the structure of an inspection job result</a></span></li><li><span><a href="#Mapping-InspectionRun-JSON-to-pandas-DataFrame" data-toc-modified-id="Mapping-InspectionRun-JSON-to-pandas-DataFrame-3"><span class="toc-item-num">3&nbsp;&nbsp;</span>Mapping InspectionRun JSON to pandas DataFrame</a></span><ul class="toc-item"><li><span><a href="#Feature-importance-analysis" data-toc-modified-id="Feature-importance-analysis-3.1"><span class="toc-item-num">3.1&nbsp;&nbsp;</span>Feature importance analysis</a></span><ul class="toc-item"><li><span><a href="#Status" data-toc-modified-id="Status-3.1.1"><span class="toc-item-num">3.1.1&nbsp;&nbsp;</span>Status</a></span></li><li><span><a href="#Specification" data-toc-modified-id="Specification-3.1.2"><span class="toc-item-num">3.1.2&nbsp;&nbsp;</span>Specification</a></span></li><li><span><a href="#Job-log" data-toc-modified-id="Job-log-3.1.3"><span class="toc-item-num">3.1.3&nbsp;&nbsp;</span>Job log</a></span></li></ul></li></ul></li><li><span><a href="#Profile-InspectionRun-duration" data-toc-modified-id="Profile-InspectionRun-duration-4"><span class="toc-item-num">4&nbsp;&nbsp;</span>Profile InspectionRun duration</a></span></li><li><span><a href="#Plot-InspectionRun-duration" data-toc-modified-id="Plot-InspectionRun-duration-5"><span class="toc-item-num">5&nbsp;&nbsp;</span>Plot InspectionRun duration</a></span></li><li><span><a href="#Library-usage" data-toc-modified-id="Library-usage-6"><span class="toc-item-num">6&nbsp;&nbsp;</span>Library usage</a></span></li><li><span><a href="#Grouping-and-filtering" data-toc-modified-id="Grouping-and-filtering-7"><span class="toc-item-num">7&nbsp;&nbsp;</span>Grouping and filtering</a></span><ul class="toc-item"><li><span><a href="#Grouping-based-on-hardware-platform" data-toc-modified-id="Grouping-based-on-hardware-platform-7.1"><span class="toc-item-num">7.1&nbsp;&nbsp;</span>Grouping based on hardware platform</a></span></li><li><span><a href="#Grouping-based-on-exit-status" data-toc-modified-id="Grouping-based-on-exit-status-7.2"><span class="toc-item-num">7.2&nbsp;&nbsp;</span>Grouping based on exit status</a></span></li><li><span><a href="#Creation-of-duration-dataframe-from-filtered-inspection-results" data-toc-modified-id="Creation-of-duration-dataframe-from-filtered-inspection-results-7.3"><span class="toc-item-num">7.3&nbsp;&nbsp;</span>Creation of duration dataframe from filtered inspection results</a></span></li></ul></li><li><span><a href="#Visualizing-grouped-data" data-toc-modified-id="Visualizing-grouped-data-8"><span class="toc-item-num">8&nbsp;&nbsp;</span>Visualizing grouped data</a></span></li></ul></div>
+# <div class="toc"><ul class="toc-item"><li><span><a href="#Retrieve-inspection-jobs-from-Ceph" data-toc-modified-id="Retrieve-inspection-jobs-from-Ceph-1"><span class="toc-item-num">1&nbsp;&nbsp;</span>Retrieve inspection jobs from Ceph</a></span></li><li><span><a href="#Describe-the-structure-of-an-inspection-job-log" data-toc-modified-id="Describe-the-structure-of-an-inspection-job-log-2"><span class="toc-item-num">2&nbsp;&nbsp;</span>Describe the structure of an inspection job log</a></span></li><li><span><a href="#Mapping-InspectionRun-JSON-to-pandas-DataFrame" data-toc-modified-id="Mapping-InspectionRun-JSON-to-pandas-DataFrame-3"><span class="toc-item-num">3&nbsp;&nbsp;</span>Mapping InspectionRun JSON to pandas DataFrame</a></span><ul class="toc-item"><li><span><a href="#Feature-importance-analysis" data-toc-modified-id="Feature-importance-analysis-3.1"><span class="toc-item-num">3.1&nbsp;&nbsp;</span>Feature importance analysis</a></span><ul class="toc-item"><li><span><a href="#Status" data-toc-modified-id="Status-3.1.1"><span class="toc-item-num">3.1.1&nbsp;&nbsp;</span>Status</a></span></li><li><span><a href="#Specification" data-toc-modified-id="Specification-3.1.2"><span class="toc-item-num">3.1.2&nbsp;&nbsp;</span>Specification</a></span></li><li><span><a href="#Job-log" data-toc-modified-id="Job-log-3.1.3"><span class="toc-item-num">3.1.3&nbsp;&nbsp;</span>Job log</a></span></li></ul></li></ul></li><li><span><a href="#Profile-InspectionRun-duration" data-toc-modified-id="Profile-InspectionRun-duration-4"><span class="toc-item-num">4&nbsp;&nbsp;</span>Profile InspectionRun duration</a></span></li><li><span><a href="#Plot-InspectionRun-duration" data-toc-modified-id="Plot-InspectionRun-duration-5"><span class="toc-item-num">5&nbsp;&nbsp;</span>Plot InspectionRun duration</a></span></li><li><span><a href="#Library-usage" data-toc-modified-id="Library-usage-6"><span class="toc-item-num">6&nbsp;&nbsp;</span>Library usage</a></span></li><li><span><a href="#Grouping-and-filtering" data-toc-modified-id="Grouping-and-filtering-7"><span class="toc-item-num">7&nbsp;&nbsp;</span>Grouping and filtering</a></span><ul class="toc-item"><li><span><a href="#Grouping-based-on-hardware-platform" data-toc-modified-id="Grouping-based-on-hardware-platform-7.1"><span class="toc-item-num">7.1&nbsp;&nbsp;</span>Grouping based on hardware platform</a></span></li><li><span><a href="#Grouping-based-on-exit-status" data-toc-modified-id="Grouping-based-on-exit-status-7.2"><span class="toc-item-num">7.2&nbsp;&nbsp;</span>Grouping based on exit status</a></span></li><li><span><a href="#Creation-of-duration-dataframe-from-filtered-inspection-results" data-toc-modified-id="Creation-of-duration-dataframe-from-filtered-inspection-results-7.3"><span class="toc-item-num">7.3&nbsp;&nbsp;</span>Creation of duration dataframe from filtered inspection results</a></span></li></ul></li><li><span><a href="#Visualizing-grouped-data" data-toc-modified-id="Visualizing-grouped-data-8"><span class="toc-item-num">8&nbsp;&nbsp;</span>Visualizing grouped data</a></span><ul class="toc-item"><li><span><a href="#Grouping-based-on-software-stack" data-toc-modified-id="Grouping-based-on-software-stack-8.1"><span class="toc-item-num">8.1&nbsp;&nbsp;</span>Grouping based on software stack</a></span></li><li><span><a href="#Grouping-based-on-OS-system" data-toc-modified-id="Grouping-based-on-OS-system-8.2"><span class="toc-item-num">8.2&nbsp;&nbsp;</span>Grouping based on OS system</a></span></li></ul></li><li><span><a href="#Further-analysis" data-toc-modified-id="Further-analysis-9"><span class="toc-item-num">9&nbsp;&nbsp;</span>Further analysis</a></span></li></ul></div>
 # %% [markdown]
 # # Amun InspectionRun Analysis
 # %% [markdown]
 # **Introduction**
 #
-# The goal of this notebook is to show the behaviour of micro-benchmarks tested on the selected software/hardware architecture. This notebook will evaluate the feasibility and accuracy of the tests in order to prove or discard the possibility of running micro-benchmarks tests for ML applications.
+# The notebook has been created to have the possibility to analyze statistics regarding the inspections results produced by Amun (https://github.com/thoth-station/amun-api). In particular the statistical analysis of inspection job logs will provide a measure of the quality of the inspection test application. The conclusions are important in order to identify the best environment to perform tests for AI stacks.
 #
-# The analysis consider ~300 inspection jobs obtained considering:
+# Input of the analysis are ~300 inspection job logs. For this initial analysis we considered:
+# - same software stack
+# - same OS
+# - same performance test
 #
-# - same libraries
-# - same versions
-# - same environment
-# - same micro-benchmark for performance test
+# This notebook can be reused for analysis of inspection job logs and can be improved. The structure of this notebook is made by several main parts:
+# - Description of an inspection job log;
+# - Profiling of all inspection job logs and feature analysis
+# - Creation of library for grouping and filtering inspection jobs
+# - Visualizing single results and results separated by category (software stacks, OS, hw, architecture, ..)
+# - Analyze the results
+# - Conclusions
 
 # %% [markdown]
 # ---
@@ -54,8 +60,11 @@ import numpy as np
 
 from pandas_profiling import ProfileReport as profile
 from pandas.io.json import json_normalize
-
 from thoth.storages import InspectionResultsStore
+
+pd.set_option("max_colwidth", 800)
+pd.set_option("display.max_rows", None)
+pd.set_option("display.max_columns", None)
 
 # %%
 import cufflinks as cf
@@ -90,14 +99,11 @@ cf.go_offline()
 inspection_store = InspectionResultsStore(region="eu-central-1")
 inspection_store.connect()
 
+
 # %% [markdown]
 # ---
 # %% [markdown] {"heading_collapsed": true}
-# ## Describe the structure of an inspection job result
-
-# %% {"hidden": true}
-pd.set_option("max_colwidth", 800)
-
+# ## Describe the structure of an inspection job log
 
 # %% {"hidden": true}
 def extract_structure_json(input_json, upper_key: str, level: int, json_structure):
@@ -150,6 +156,7 @@ def filter_dfs(df_s, filter_df):
 # We can take a look at the inspection job structure from the point of view of the tree depth, considering a key or a combination of keys in order to understand the common inputs for all inspections.
 
 # %% {"hidden": true}
+doc_id, doc = next(inspection_store.iterate_results())
 df_structure = pd.DataFrame(extract_structure_json(doc, "", 0, []))
 df_structure.columns = ["Tree_depth", "Upper_keys", "Current_key", "Value"]
 
@@ -199,7 +206,7 @@ filter_dfs(df_structure, "__job_log__hwinfo__platform")
 filter_dfs(df_structure, "__specification__python__requirements_locked___meta")
 
 # %% [markdown] {"hidden": true}
-# Check which libraries are used.
+# Check which libraries are used
 
 # %% {"hidden": true}
 for package in filter_dfs(
@@ -227,6 +234,9 @@ filter_dfs(df_structure, "base")
 # %% {"hidden": true}
 filter_dfs(df_structure, "script")
 
+# %%
+filter_dfs(df_structure, "script_sha256")
+
 # %% [markdown] {"hidden": true}
 # ---
 # %% [markdown]
@@ -240,6 +250,10 @@ for document_id, document in inspection_store.iterate_results():
     document["build_log"] = None
 
     inspection_results.append(document)
+
+# %%
+df = json_normalize(inspection_results, sep = ".")  # each row resembles InspectionResult
+df
 
 # %% [markdown]
 # ### Feature importance analysis
@@ -772,8 +786,6 @@ py.iplot(fig)
 # %% [markdown]
 # ## Grouping and filtering
 #
-# [Trello](https://trello.com/c/7IiBLufs/560-grouping-of-inspection-job-results-based-on-given-criteria-nokr)
-#
 # The goal of this part is to have a function which divides inspection jobs into “categories”, the function accepts loaded inspection JSON files and a key which should be used to split input inspection documents.
 
 # %% {"code_folding": [0]}
@@ -1002,14 +1014,13 @@ df = process_inspection_results(
     inspection_results,
     exclude=["build_log", "created", "inspection_id"],
     apply=[("created|started_at|finished_at", pd.to_datetime)],
-    drop=False,
 )
 
 # %% [markdown]
 # ### Grouping based on hardware platform
 
 # %%
-query_inspection_dataframe(df, groupby="platform", exclude="node")
+query_inspection_dataframe(df, groupby="hwinfo", exclude="node")
 
 # %% [markdown]
 # It is also possible to group by multiple columns
@@ -1265,9 +1276,87 @@ def make_subplots(
 
 
 # %%
-d = query_inspection_dataframe(df, groupby=["platform", "ncpus"], exclude="node")
+d = query_inspection_dataframe(df, groupby=["hwinfo"], exclude="node")
 d = create_duration_dataframe(d)
 
-fig = make_subplots(d)
+fig = make_subplots(d, kind="histogram", columns=["job_duration"])
 
 py.iplot(fig)
+
+# %% [markdown]
+# ### Grouping based on software stack
+
+# %%
+query_inspection_dataframe(df, groupby=["specification__python__requirements_locked__default"])
+
+# %% [markdown]
+# ### Grouping based on OS system
+
+# %%
+query_inspection_dataframe(df, groupby=["base"], like="duration", exclude="node")
+
+
+# %% [markdown]
+# ## Further analysis
+
+# %%
+def show_categories(df_inspections, indices: list, indices_name: list, create_plot: bool = False):
+    """List categories and if requested plot them"""
+    n = 0
+    for index in unique_indices:
+        print()
+        print("Category {}/{}".format(n + 1, len(unique_indices)))
+        if len(indices_name) > 1:
+            for name, ind in zip(indices_name, index):
+                print(f"{name} :",ind)
+        else:
+            print(f"{indices_name[0]} :",index)
+        n+=1
+
+        frame = df_inspections.loc[index]
+        print("Number of rows (jobs) is:", frame.shape[0])
+        if create_plot:
+            df_duration = create_duration_dataframe(frame)
+            fig = create_duration_histogram(df_duration, ['job_duration'])
+            py.iplot(fig)
+
+
+# %%
+d = query_inspection_dataframe(df, groupby="specification__python__requirements_locked__default", exclude="node")
+# Display the categories identified
+unique_indices = d.index.droplevel(-1).unique().values
+names_indices = d.index.droplevel(-1).unique().names
+
+show_categories(d, unique_indices, names_indices, create_plot=True)
+
+# %%
+dn = query_inspection_dataframe(df, groupby="job_log__hwinfo__cpu__ncpus", exclude="node")
+# Display the categories identified
+unique_indices = dn.index.droplevel(-1).unique().values
+names_indices = dn.index.droplevel(-1).unique().names
+
+show_categories(dn, unique_indices, names_indices)
+
+# %%
+dn = query_inspection_dataframe(df, groupby="platform", exclude="node")
+# Display the categories identified
+unique_indices = dn.index.droplevel(-1).unique().values
+names_indices = dn.index.droplevel(-1).unique().names
+
+show_categories(dn, unique_indices, names_indices)
+
+# %%
+dn = query_inspection_dataframe(df, groupby="hwinfo", exclude="node")
+# Display the categories identified
+unique_indices = dn.index.droplevel(-1).unique().values
+names_indices = dn.index.droplevel(-1).unique().names
+
+show_categories(dn, unique_indices, names_indices)
+
+# %%
+dn = query_inspection_dataframe(df, groupby="job_log__hwinfo__platform__release", exclude="node")
+# Display the categories identified
+unique_indices = dn.index.droplevel(-1).unique().values
+names_indices = dn.index.droplevel(-1).unique().names
+
+show_categories(dn, unique_indices, names_indices)
