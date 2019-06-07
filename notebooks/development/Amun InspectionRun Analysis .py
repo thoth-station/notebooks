@@ -7,11 +7,11 @@
 #       extension: .py
 #       format_name: hydrogen
 #       format_version: '1.2'
-#       jupytext_version: 1.1.4
+#       jupytext_version: 1.1.1
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: thoth-notebooks
 #     language: python
-#     name: python3
+#     name: thoth-notebooks
 # ---
 
 # %% [markdown] {"toc": true}
@@ -51,6 +51,7 @@ from typing import Any, Dict, List, Tuple, Union
 from typing import Callable, Iterable
 
 from collections import namedtuple
+from prettyprinter import pformat
 
 logger = logging.getLogger()
 
@@ -234,7 +235,7 @@ filter_dfs(df_structure, "base")
 # %% {"hidden": true}
 filter_dfs(df_structure, "script")
 
-# %%
+# %% {"hidden": true}
 filter_dfs(df_structure, "script_sha256")
 
 # %% [markdown] {"hidden": true}
@@ -1250,23 +1251,29 @@ def make_subplots(
     annot_df = pd.DataFrame(layout.to_plotly_json()['annotations']).sort_values(['x', 'y'])
     annot_df = annot_df[annot_df.text.str.len() > 0]
     
-    aw = int(max(60 / shape[1] - ( 2 * shape[1]), 6))  # annotation width magic
+    aw = min(  # annotation width magic
+        int(max(60 / shape[1] - ( 2 * shape[1]), 6)),
+        int(max(30 / shape[0] - ( 2 * shape[0]), 6))
+    )
     
     for i, annot_idx in enumerate(annot_df.index):
         annot = layout.annotations[annot_idx]
         
-        text = annot["text"]
+        index_label: Union[str, Any] = annot["text"]
         if isinstance(index, pd.MultiIndex):
             index_axis = i >= shape[1]
             if shape[0] == 1:
-                pass  # no worries, the order is aight
+                pass  # no worries, the order and label are aight
             elif shape[1] == 1:
-                text: str = str(index.levels[index_axis][max(0, i - 1)])
+                index_label = index.levels[index_axis][max(0, i - 1)]
             else:
-                text: str = str(index.levels[index_axis][i % shape[1]])
+                index_label = index.levels[index_axis][i % shape[1]]
+        
+        text: str = str(index_label)
         
         annot["text"] = re.sub(r"^(.{%d}).*(.{%d})$" % (aw, aw), "\g<1>...\g<2>", text)
-
+        annot["hovertext"] = "<br>".join(pformat(index_label).split("\n"))
+        
     # custom user layout updates
     user_layout = kwargs.pop("layout", None)
     if user_layout:
@@ -1276,7 +1283,7 @@ def make_subplots(
 
 
 # %%
-d = query_inspection_dataframe(df, groupby=["hwinfo"], exclude="node")
+d = query_inspection_dataframe(df, groupby=["hwinfo", "release"], exclude="node")
 d = create_duration_dataframe(d)
 
 fig = make_subplots(d, kind="histogram", columns=["job_duration"])
@@ -1300,63 +1307,48 @@ query_inspection_dataframe(df, groupby=["base"], like="duration", exclude="node"
 # ## Further analysis
 
 # %%
-def show_categories(df_inspections, indices: list, indices_name: list, create_plot: bool = False):
+def show_categories(inspection_df):
     """List categories and if requested plot them"""
-    n = 0
-    for index in unique_indices:
-        print()
-        print("Category {}/{}".format(n + 1, len(unique_indices)))
-        if len(indices_name) > 1:
-            for name, ind in zip(indices_name, index):
+    index = inspection_df.index.droplevel(-1).unique()
+    
+    for n, idx in enumerate(index.values):
+        print("\nCategory {}/{}".format(n + 1, len(index)))
+        if len(index.names) > 1:
+            for name, ind in zip(index.names, idx):
                 print(f"{name} :",ind)
         else:
-            print(f"{indices_name[0]} :",index)
-        n+=1
+            print(f"{index.names[0]} :",idx)
 
-        frame = df_inspections.loc[index]
+        frame = inspection_df.loc[idx]
         print("Number of rows (jobs) is:", frame.shape[0])
-        if create_plot:
-            df_duration = create_duration_dataframe(frame)
-            fig = create_duration_histogram(df_duration, ['job_duration'])
-            py.iplot(fig)
 
 
 # %%
 d = query_inspection_dataframe(df, groupby="specification__python__requirements_locked__default", exclude="node")
 # Display the categories identified
-unique_indices = d.index.droplevel(-1).unique().values
-names_indices = d.index.droplevel(-1).unique().names
 
-show_categories(d, unique_indices, names_indices, create_plot=True)
+show_categories(d)
 
 # %%
 dn = query_inspection_dataframe(df, groupby="job_log__hwinfo__cpu__ncpus", exclude="node")
 # Display the categories identified
-unique_indices = dn.index.droplevel(-1).unique().values
-names_indices = dn.index.droplevel(-1).unique().names
 
-show_categories(dn, unique_indices, names_indices)
+show_categories(dn)
 
 # %%
 dn = query_inspection_dataframe(df, groupby="platform", exclude="node")
 # Display the categories identified
-unique_indices = dn.index.droplevel(-1).unique().values
-names_indices = dn.index.droplevel(-1).unique().names
 
-show_categories(dn, unique_indices, names_indices)
+show_categories(dn)
 
 # %%
 dn = query_inspection_dataframe(df, groupby="hwinfo", exclude="node")
 # Display the categories identified
-unique_indices = dn.index.droplevel(-1).unique().values
-names_indices = dn.index.droplevel(-1).unique().names
 
-show_categories(dn, unique_indices, names_indices)
+show_categories(dn)
 
 # %%
 dn = query_inspection_dataframe(df, groupby="job_log__hwinfo__platform__release", exclude="node")
 # Display the categories identified
-unique_indices = dn.index.droplevel(-1).unique().values
-names_indices = dn.index.droplevel(-1).unique().names
 
-show_categories(dn, unique_indices, names_indices)
+show_categories(dn)
