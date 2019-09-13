@@ -7,8 +7,8 @@ THOTH_DEPLOYMENT_NAME\tcustom deployment name\t[optional], defaults to \$USER\n
 THOTH_CEPH_HOST\t Ceph s3 host url\n
 THOTH_CEPH_BUCKET\t Ceph s3 bucket name\n
 THOTH_CEPH_BUCKET_PREFIX\t Ceph s3 bucket prefix\t\n
-JANUSGRAPH_SERVICE_HOST\t Janusgraph host url\t\n
-JANUSGRAPH_SERVICE_PORT\t Janusgraph host port\t [optional], defaults to 8182\n
+GRAPH_SERVICE_HOST\t graph host url\t\n
+GRAPH_SERVICE_PORT\t graph host port\t [optional], defaults to 9080\n
 "
 
 function die() {
@@ -80,8 +80,8 @@ THOTH_DEPLOYMENT_NAME=${THOTH_DEPLOYMENT_NAME:="$USER"}
 THOTH_CEPH_HOST=${THOTH_CEPH_HOST:=""}
 THOTH_CEPH_BUCKET=${THOTH_CEPH_BUCKET:=""}
 THOTH_CEPH_BUCKET_PREFIX=${THOTH_CEPH_BUCKET_PREFIX:=""}
-JANUSGRAPH_SERVICE_HOST=${JANUSGRAPH_SERVICE_HOST:=""}
-JANUSGRAPH_SERVICE_PORT=${JANUSGRAPH_SERVICE_PORT:="8182"}
+GRAPH_SERVICE_HOST=${GRAPH_SERVICE_HOST:=""}
+GRAPH_SERVICE_PORT=${GRAPH_SERVICE_PORT:="9080"}
 
 
 if [ "${INSTALL}" = "true" ]; then
@@ -104,12 +104,12 @@ if [ "${LOCAL}" = "false" ]; then
 	[ -z "$THOTH_CEPH_HOST" ]          && die "ERROR: THOTH_CEPH_HOST must be set"
 	[ -z "$THOTH_CEPH_BUCKET" ]        && die "ERROR: THOTH_CEPH_BUCKET must be set"
 	[ -z "$THOTH_CEPH_BUCKET_PREFIX" ] && die "ERROR: THOTH_CEPH_BUCKET_PREFIX must be set"
-	[ -z "$JANUSGRAPH_SERVICE_HOST" ]  && die "ERROR: JANUSGRAPH_SERVICE_HOST must be set"
+	[ -z "$GRAPH_SERVICE_HOST" ]       && die "ERROR: GRAPH_SERVICE_HOST must be set"
 
 	# These are optional
 	echo -e "\033[33;1mINFO: Checking optional environment variables.\033[0m"
 	[ -z "$THOTH_DEPLOYMENT_NAME" ]    && echo "WARNING: THOTH_DEPLOYMENT_NAME was not set: using $THOTH_DEPLOYMENT_NAME"
-	[ -z "$JANUSGRAPH_SERVICE_PORT" ]  && echo "WARNING: JANUSGRAPH_SERVICE_PORT was not set: using $JANUSGRAPH_SERVICE_PORT"
+	[ -z "$GRAPH_SERVICE_PORT" ]       && echo "WARNING: GRAPH_SERVICE_PORT was not set: using $GRAPH_SERVICE_PORT"
 
 	ulimit -Sn 4096
 fi
