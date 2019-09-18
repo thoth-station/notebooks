@@ -21,7 +21,7 @@ Using .yaml for example
 
 .. code-block:: console
 
-    identifier_inspection:
+    identifiers_inspection:
         - "64-matrix-size"
         - "128-matrix-size"
         - "256-matrix-size"
@@ -48,8 +48,6 @@ THOTH NOTEBOOK TEMPLATE INPUTS
 
 --> Inspection_jobs_analysis_TEMPLATE.ipynb 
 
-    :identifier_inspection: List of inspection identifiers to filter the inspection document ids
-        - "64-matrix-size"
-        - "128-matrix-size"
+    :identifier_inspection: List of inspection identifiers to filter the inspection document ids 
     :static_figure: Bool to produce static or interactive plots
     :limit_results: Bool to limit the analysis to few inspection ids (used for testing notebook outputs)
