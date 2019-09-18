@@ -27,3 +27,12 @@ The host system has to have Python3 and pipenv installed.
 For local run, there are used Thoth's libraries as cloned on the local machine.
 
 If you would like to access resources on the cluster, provide the `run.sh` script required environment variables.
+
+
+THOTH NOTEBOOKS TEMPLATE
+==============================
+
+Project Thoth uses template notebook to repeat analysis automatically.
+
+Thoth notebooks templates are stored in `templates <https://github.com/thoth-station/notebooks/tree/master/notebooks/templates>`_,
+check the README files in that folder for more details.

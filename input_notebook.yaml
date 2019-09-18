@@ -1,0 +1,10 @@
+identifiers_inspection:
+    - "64-matrix-size"
+    - "128-matrix-size"
+    - "256-matrix-size"
+    - "test-ms"  
+    - "1024-matrix-size"
+    - "2048-matrix-size"
+    - "4096-matrix-size"  
+static_figure: True
+limit_results: True
