@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # ---
 # jupyter:
 #   jupytext:
@@ -553,7 +552,6 @@ df_duration.job_duration.iplot(
 
 
 # %% {"code_folding": [8, 65, 81, 100, 175], "init_cell": true}
-# -*- coding: utf-8 -*-
 
 """Thoth InspectionRun dashboard app."""
 
